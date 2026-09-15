@@ -12,7 +12,7 @@ de terminé commune sont dans [WORKFLOW.md](WORKFLOW.md).
 | # | Ticket | Couches | Agent | Dépend de | État |
 | --- | --- | --- | --- | --- | --- |
 | T-01 | [Socle applicatif et garde-fous](tickets/T-01-socle-applicatif.md) | outillage | — | — | fait |
-| T-02 | [Chaîne de qualité en CI](tickets/T-02-chaine-qualite-ci.md) | outillage | — | T-01 | à faire |
+| T-02 | [Chaîne de qualité en CI](tickets/T-02-chaine-qualite-ci.md) | outillage | — | T-01 | fait |
 | T-03 | [Design system et branding](tickets/T-03-design-system-branding.md) | components/ui | ui-builder | T-01 | à faire |
 
 ## Données et autorisation
