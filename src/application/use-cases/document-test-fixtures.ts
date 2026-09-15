@@ -41,6 +41,12 @@ export function fakeRepository(seed: readonly TaskDocumentRecord[] = []) {
     async delete(id) {
       records.delete(id);
     },
+    async listByJourney() {
+      // Aucun cas d'usage n'orchestre encore cette methode : la page du
+      // portail interroge le vrai depot directement, comme T-16 le fait deja
+      // pour ses lectures. Rien a exercer ici, seulement satisfaire le type.
+      return [...records.values()];
+    },
   };
   return { repository, records };
 }

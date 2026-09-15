@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
-    "db:reset": "supabase db reset && tsx scripts/seed/align-demo-dates.ts",
+    "db:reset": "supabase db reset && tsx scripts/seed/align-demo-dates.ts && tsx scripts/seed/seed-portal-document.ts",
     "db:check-dates": "tsx scripts/seed/align-demo-dates.ts --check",
     "demo:report": "tsx scripts/demo/report.ts",
     "db:diff": "supabase db diff",
