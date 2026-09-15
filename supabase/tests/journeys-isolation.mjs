@@ -55,11 +55,14 @@ check(
   JSON.stringify(managed.rows?.map((r) => r.employee_name) ?? managed.error),
 );
 
-// 4. La RH voit toute sa societe, et rien d une autre.
+// 4. La RH voit toute sa societe, et rien d une autre. On verifie l
+// appartenance de chaque ligne, pas leur nombre : le jeu de demonstration
+// (T-08) ajoute d autres parcours a la meme societe sans que cela remette la
+// policy en cause.
 const hr = await asUser(db, RH_NORD, 'select employee_name, company_id from public.journeys');
 check(
   'La RH voit les parcours de sa societe, et aucun d une autre',
-  hr.rows?.length === 2 && hr.rows.every((row) => row.company_id === NORD),
+  hr.rows?.length > 0 && hr.rows.every((row) => row.company_id === NORD),
   JSON.stringify(hr.rows?.map((r) => r.employee_name) ?? hr.error),
 );
 
