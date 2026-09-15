@@ -23,6 +23,8 @@ export interface Task {
   readonly dependsOn: readonly string[];
   readonly status: TaskStatus;
   readonly dueDate: PlainDate;
+  /** Document the owner is expected to attach; null when none is required. */
+  readonly expectedDocument: string | null;
   /**
    * Tasks sharing a key are the same piece of work serving several arrivals —
    * one badge order for three newcomers. Null when the task is specific.

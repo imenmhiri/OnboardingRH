@@ -11,6 +11,7 @@ export function makeTask(overrides: Partial<Task> & Pick<Task, 'id'>): Task {
     dependsOn: [],
     status: 'pending',
     dueDate: parsePlainDate('2026-03-02'),
+    expectedDocument: null,
     sharedKey: null,
     ...overrides,
   };

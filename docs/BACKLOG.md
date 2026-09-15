@@ -31,7 +31,7 @@ de terminé commune sont dans [WORKFLOW.md](WORKFLOW.md).
 | --- | --- | --- | --- | --- | --- |
 | T-09 | [Jours ouvrés et échéances](tickets/T-09-moteur-jours-ouvres.md) | domain/scheduling | domain-expert | T-01 | fait |
 | T-10 | [Graphe de dépendances](tickets/T-10-graphe-dependances-taches.md) | domain/tasks | domain-expert | T-09 | fait |
-| T-11 | [Templates et instanciation](tickets/T-11-templates-instanciation-parcours.md) | domain/templates | domain-expert | T-09, T-10 | jet sur branche |
+| T-11 | [Templates et instanciation](tickets/T-11-templates-instanciation-parcours.md) | domain/templates | domain-expert | T-09, T-10 | fait |
 | T-12 | [Responsables et repli](tickets/T-12-resolution-responsables.md) | domain/tasks | domain-expert | T-10, T-11 | à faire |
 | T-13 | [Relance et escalade](tickets/T-13-relance-escalade.md) | domain/escalation | domain-expert | T-09, T-10, T-12 | à faire |
 | T-14 | [Satisfaction J+7 / J+30](tickets/T-14-satisfaction-j7-j30.md) | domain/surveys | domain-expert, db-architect | T-06, T-09 | à faire |
@@ -77,14 +77,9 @@ Chacun est rattaché à un ticket qui doit le couvrir par un test nommé.
 | Tâche commune à plusieurs arrivées | T-10, aussi T-19 |
 | Fin de contrat avant J+30 | T-14, aussi T-23 |
 
-## Ce qui existe déjà sur des branches
+## Note historique
 
-Quatre tickets ont un premier jet écrit avant que le backlog ne soit posé. Le code n'est pas dans
-`main` : il sera repris, relu et complété au moment où le ticket sera traité.
-
-| Ticket | Branche |
-| --- | --- |
-| T-11 | `feat/5-journey-template-instantiation` |
-
-Aucune de ces branches n'a été vérifiée contre une base Supabase réelle : la CLI Supabase et Docker
-ne sont pas disponibles sur la machine de développement actuelle.
+Les quatre premiers tickets du domaine (T-04, T-09, T-10, T-11) ont eu un premier jet écrit avant
+que ce backlog ne soit posé, sur des branches qui traînaient l'historique d'un ancien découpage.
+Chacun a été repris depuis `main`, isolé de ce qui ne lui appartenait pas, relu, complété et vérifié
+contre une base Supabase réelle avant d'être mergé. Les quatre sont aujourd'hui « fait » ci-dessus.
