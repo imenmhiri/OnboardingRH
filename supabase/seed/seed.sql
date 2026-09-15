@@ -341,7 +341,9 @@ values
   ('c1000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000002', 'day_30', current_date + 29, 'scheduled', null, 'email', null, null),
   -- Diego : J+7 maintenu, J+30 annulé à la planification plutôt qu'envoyé.
   -- Pas de compte, donc pas d'adresse : le canal alternatif est le portail.
-  ('c1000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000003', 'day_7', current_date - 1, 'sent', null, 'portal_link', now() - interval '1 day', null),
+  -- Son J+7 tombe dans les prochains jours ouvrés : il est prévu, pas encore
+  -- envoyé — scripts/seed/align-demo-dates.ts refuse un envoi daté du futur.
+  ('c1000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000003', 'day_7', current_date + 1, 'scheduled', null, 'portal_link', null, null),
   ('c1000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000003', 'day_30', current_date + 22, 'cancelled', 'contract_ended_before', null, null, null);
 
 insert into public.survey_responses (company_id, survey_id, rating, comment, themes)

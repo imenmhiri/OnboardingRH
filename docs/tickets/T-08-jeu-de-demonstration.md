@@ -60,6 +60,16 @@ connexions distinctes pendant une démonstration en direct.
   plutôt que leur nombre, comme la même classe de défaut déjà rencontrée à T-05.
 - Comptes de démonstration et leur mot de passe documentés dans le README.
 
+## Dates réalignées sur le moteur, après coup
+
+Le seed posait les échéances en décalages calendaires (`current_date + 5` pour « -5 jours ouvrés »),
+si bien que certaines tombaient un week-end — deux arrivées un samedi, un badge dû un samedi, un poste
+un dimanche. Le constat est venu de T-14 ; la correction est `scripts/seed/align-demo-dates.ts`, qui
+recalcule toutes les dates avec `domain/scheduling` à chaque `npm run db:reset`. Une arrivée passée
+recule au jour ouvré précédent et une arrivée future avance : aucun parcours ne change de stade en
+étant réaligné — vérifié, les quatre stades, le parcours bloqué et l'absence du manager restent
+intacts.
+
 ## Dette laissée derrière
 
 - Aucun document réel déposé dans le bucket de stockage pour ces tâches : la génération d'un lien
