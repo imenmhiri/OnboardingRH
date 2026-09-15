@@ -41,7 +41,7 @@ de terminé commune sont dans [WORKFLOW.md](WORKFLOW.md).
 
 | # | Ticket | Couches | Agent | Dépend de | État |
 | --- | --- | --- | --- | --- | --- |
-| T-16 | [Créateur de parcours](tickets/T-16-createur-de-parcours.md) | app | ui-builder | T-03, T-06, T-11 | à faire |
+| T-16 | [Créateur de parcours](tickets/T-16-createur-de-parcours.md) | app | ui-builder | T-03, T-06, T-11 | fait |
 | T-17 | [Portail employé](tickets/T-17-portail-employe.md) | app | ui-builder | T-03, T-05, T-06, T-07 | à faire |
 | T-18 | [Cockpit RH](tickets/T-18-cockpit-rh.md) | app | ui-builder | T-03, T-06, T-10, T-12, T-14 | à faire |
 | T-19 | [Gestion du matériel](tickets/T-19-gestion-materiel.md) | app | ui-builder | T-03, T-15 | à faire |
