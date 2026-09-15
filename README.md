@@ -82,13 +82,14 @@ la démonstration reste à jour quelle que soit la date à laquelle elle est rej
 
 Comptes de démonstration (mot de passe commun `OnboardingDemo!2026`) :
 
-| Rôle | Email | Société |
-| --- | --- | --- |
-| RH | `rh@atelier-nord.demo` | Atelier Nord |
-| Manager | `manager@atelier-nord.demo` | Atelier Nord |
-| IT | `it@atelier-nord.demo` | Atelier Nord |
-| Employé | `alice@atelier-nord.demo` | Atelier Nord |
-| Manager **et** employé | `nadia@groupe.demo` | Atelier Nord (manager) et Méridien Gulf (employé) |
+| Rôle | Email | Société | Parcours rattaché |
+| --- | --- | --- | --- |
+| RH | `rh@atelier-nord.demo` | Atelier Nord | — (voit tous ceux de sa société) |
+| Manager | `manager@atelier-nord.demo` | Atelier Nord | — (voit ceux de ses rattachés) |
+| IT | `it@atelier-nord.demo` | Atelier Nord | — (voit les tâches de son rôle) |
+| Employé | `alice@atelier-nord.demo` | Atelier Nord | son intégration, en cours |
+| Employé | `claire@atelier-nord.demo` | Atelier Nord | son intégration, à venir |
+| Manager **et** employé | `nadia@groupe.demo` | Atelier Nord (manager) et Méridien Gulf (employé) | — |
 
 Le dernier compte démontre la bascule de société : même personne, rôle et marque différents selon la
 société active.

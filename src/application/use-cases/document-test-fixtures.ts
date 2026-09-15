@@ -1,5 +1,5 @@
 import type { AuditEvent, AuditTrail } from '@/application/ports/audit-trail';
-import type { SignedUrl, Storage, StorageUploadInput } from '@/application/ports/storage';
+import type { Storage, StorageUploadInput } from '@/application/ports/storage';
 import type {
   NewTaskDocument,
   TaskDocumentRecord,
