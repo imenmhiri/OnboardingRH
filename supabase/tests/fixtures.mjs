@@ -75,3 +75,65 @@ export async function asUser(db, userId, sql, params = []) {
     await db.query('rollback');
   }
 }
+
+export const MGR_NORD = 'aaaaaaaa-0000-4000-8000-000000000003';
+export const EMP_NORD = 'aaaaaaaa-0000-4000-8000-000000000004';
+export const EMP2_NORD = 'aaaaaaaa-0000-4000-8000-000000000005';
+
+export const JOURNEY_NORD = 'cccccccc-0000-4000-8000-000000000001';
+export const JOURNEY_NORD_2 = 'cccccccc-0000-4000-8000-000000000002';
+export const JOURNEY_GULF = 'cccccccc-0000-4000-8000-000000000003';
+export const TASK_IT = 'dddddddd-0000-4000-8000-000000000001';
+export const TASK_MANAGER = 'dddddddd-0000-4000-8000-000000000002';
+
+/** Deux arrivees chez Atelier Nord, une chez Meridien Gulf. */
+export async function installJourneys(db) {
+  const people = [
+    [MGR_NORD, 'manager@atelier-nord.test', 'Marc Manager', NORD, 'manager'],
+    [EMP_NORD, 'arrivant@atelier-nord.test', 'Alice Arrivante', NORD, 'employee'],
+    [EMP2_NORD, 'collegue@atelier-nord.test', 'Claire Collegue', NORD, 'employee'],
+  ];
+  for (const [id, email, name, company, role] of people) {
+    await db.query(INSERT_USER, [id, email]);
+    await db.query(
+      `insert into public.profiles (id, full_name) values ($1, $2) on conflict (id) do nothing`,
+      [id, name],
+    );
+    await db.query(
+      `insert into public.company_members (company_id, user_id, role) values ($1, $2, $3)
+       on conflict do nothing`,
+      [company, id, role],
+    );
+  }
+
+  const journeys = [
+    [JOURNEY_NORD, NORD, EMP_NORD, MGR_NORD, 'Alice Arrivante', '2026-04-07'],
+    [JOURNEY_NORD_2, NORD, EMP2_NORD, null, 'Claire Collegue', '2026-04-14'],
+    [JOURNEY_GULF, GULF, EMP_GULF, null, 'Emma Employée', '2026-04-07'],
+  ];
+  for (const [id, company, employee, manager, name, arrival] of journeys) {
+    await db.query(
+      `insert into public.journeys (id, company_id, employee_id, manager_id, employee_name, arrival_date)
+       values ($1, $2, $3, $4, $5, $6) on conflict (id) do nothing`,
+      [id, company, employee, manager, name, arrival],
+    );
+  }
+
+  const tasks = [
+    [TASK_IT, NORD, JOURNEY_NORD, 'Créer le compte IT', 'it', null, '2026-04-03'],
+    [TASK_MANAGER, NORD, JOURNEY_NORD, 'Préparer le poste de travail', 'manager', MGR_NORD, '2026-04-07'],
+  ];
+  for (const [id, company, journey, title, role, owner, due] of tasks) {
+    await db.query(
+      `insert into public.tasks (id, company_id, journey_id, title, owner_role, owner_id, due_on)
+       values ($1, $2, $3, $4, $5, $6, $7) on conflict (id) do nothing`,
+      [id, company, journey, title, role, owner, due],
+    );
+  }
+
+  await db.query(
+    `insert into public.task_dependencies (task_id, depends_on_id) values ($1, $2)
+     on conflict do nothing`,
+    [TASK_MANAGER, TASK_IT],
+  );
+}

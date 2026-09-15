@@ -16,7 +16,7 @@
     "db:reset": "supabase db reset",
     "db:diff": "supabase db diff",
     "db:push": "supabase db push",
-    "db:verify": "node supabase/tests/rls-isolation.mjs"
+    "db:verify": "node supabase/tests/rls-isolation.mjs && node supabase/tests/journeys-isolation.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",
