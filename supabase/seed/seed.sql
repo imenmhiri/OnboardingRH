@@ -350,3 +350,52 @@ insert into public.survey_responses (company_id, survey_id, rating, comment, the
 values
   ('11111111-1111-4111-8111-111111111111', 'c1000000-0000-4000-8000-000000000001', 4, 'Accueil chaleureux, poste prêt dès le premier jour.', '{accueil}'),
   ('11111111-1111-4111-8111-111111111111', 'c1000000-0000-4000-8000-000000000002', 2, 'Toujours pas d''accès à l''outil de planification.', '{accès,matériel}');
+
+-- ============================================================================
+-- Matériel : catalogue et demandes
+-- ============================================================================
+insert into public.equipment_catalog_items (id, company_id, name, category)
+values
+  ('f2000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'Ordinateur portable standard', 'computer'),
+  ('f2000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'Badge d''accès', 'badge'),
+  ('f2000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'Casque audio', 'accessory'),
+  ('f2000000-0000-4000-8000-000000000004', '22222222-2222-4222-8222-222222222222', 'Ordinateur portable standard', 'computer'),
+  ('f2000000-0000-4000-8000-000000000005', '22222222-2222-4222-8222-222222222222', 'Badge d''accès', 'badge')
+on conflict (company_id, name) do nothing;
+
+insert into public.equipment_requests (id, company_id, journey_id, task_id, catalog_item_id, status)
+values
+  -- Alice et Farida : parcours avancés, matériel réglé — cohérent avec leur
+  -- tâche « accueil et remise du matériel » déjà soldée.
+  ('f3000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000002', 'b2000000-0000-4000-8000-000000000005', 'f2000000-0000-4000-8000-000000000001', 'acknowledged'),
+  ('f3000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000002', null, 'f2000000-0000-4000-8000-000000000002', 'acknowledged'),
+  ('f3000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000004', 'b4000000-0000-4000-8000-000000000005', 'f2000000-0000-4000-8000-000000000001', 'acknowledged'),
+
+  -- Diego (parcours bloqué) : le badge a été remis en main propre mais jamais
+  -- accusé — exactement le cas limite du ticket, et il tient tout seul avec
+  -- la tâche « accueil » déjà en retard (T-08). Son ordinateur, lui, n'est
+  -- même pas encore commandé.
+  ('f3000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000003', 'b3000000-0000-4000-8000-000000000005', 'f2000000-0000-4000-8000-000000000002', 'handed_over'),
+  ('f3000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000003', null, 'f2000000-0000-4000-8000-000000000001', 'requested'),
+
+  -- Claire (à venir) : un ordinateur encore à commander — avec celui de Diego,
+  -- deux demandes du même modèle en attente, à regrouper en une commande. Son
+  -- badge, lui, avait été attribué puis repris quand son arrivée avait glissé ;
+  -- il attend une nouvelle affectation.
+  ('f3000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', null, 'f2000000-0000-4000-8000-000000000001', 'requested'),
+  ('f3000000-0000-4000-8000-000000000007', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', null, 'f2000000-0000-4000-8000-000000000002', 'requested');
+
+-- Trace du cas limite « attribué puis repris » : sans historique dédié, c'est
+-- le journal d'audit (déjà en place depuis T-06) qui porte la raison.
+insert into public.audit_events (company_id, journey_id, action, payload)
+values (
+  '11111111-1111-4111-8111-111111111111',
+  'a0000000-0000-4000-8000-000000000001',
+  'equipment.reclaimed',
+  jsonb_build_object(
+    'requestId', 'f3000000-0000-4000-8000-000000000007',
+    'from', 'assigned',
+    'to', 'requested',
+    'reason', 'Arrivée décalée : badge remis au pool commun avant d''être réaffecté.'
+  )
+);
