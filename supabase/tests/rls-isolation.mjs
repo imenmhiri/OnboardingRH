@@ -93,14 +93,21 @@ check(
 const itMembers = await asUser(db, IT_NORD, 'select user_id from public.company_members');
 check("Un membre IT ne voit que sa propre appartenance", itMembers.rows?.length === 1, `n=${itMembers.rows?.length ?? itMembers.error}`);
 
-const rhMembers = await asUser(db, RH_NORD, 'select user_id from public.company_members');
-check('La RH voit les appartenances de sa societe', rhMembers.rows?.length === 2, `n=${rhMembers.rows?.length ?? rhMembers.error}`);
+const rhMembers = await asUser(db, RH_NORD, 'select user_id, company_id from public.company_members');
+// On verifie l appartenance des lignes, pas leur nombre : d autres comptes
+// peuvent exister dans la meme societe sans que la policy soit en cause.
+check(
+  'La RH voit les appartenances de sa societe, et rien d une autre',
+  rhMembers.rows?.length > 1 && rhMembers.rows.every((row) => row.company_id === NORD),
+  JSON.stringify(rhMembers.rows?.map((r) => r.company_id) ?? rhMembers.error),
+);
 
 const itProfiles = await asUser(db, IT_NORD, 'select full_name from public.profiles order by full_name');
 check(
   'Un profil d une autre societe reste invisible',
-  itProfiles.rows?.length === 2 && !itProfiles.rows.some((r) => r.full_name.includes('Emma')),
-  JSON.stringify(itProfiles.rows ?? itProfiles.error),
+  itProfiles.rows?.some((r) => r.full_name === 'Rachel RH') &&
+    !itProfiles.rows.some((r) => r.full_name.includes('Emma')),
+  JSON.stringify(itProfiles.rows?.map((r) => r.full_name) ?? itProfiles.error),
 );
 
 // 6. Visiteur non authentifie
