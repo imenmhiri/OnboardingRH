@@ -252,6 +252,60 @@ check("Une reponse ne se reecrit pas apres coup", responseRewritten.ok && respon
 const settingsElsewhere = await asUser(db, EMP_GULF, 'select count(*)::int as n from public.survey_settings where company_id = $1', [NORD]);
 check("Une autre societe ne voit pas les seuils de satisfaction", settingsElsewhere.rows?.[0]?.n === 0, `n=${settingsElsewhere.rows?.[0]?.n}`);
 
+// 13. Matériel (T-15) : l'IT voit tout, l'employé voit le sien, seul l'accusé
+// de réception lui est ouvert en écriture — jamais un autre statut.
+const catalogSeen = await asUser(db, IT_NORD, 'select company_id from public.equipment_catalog_items');
+check(
+  'L IT lit le catalogue de sa societe, et rien d une autre',
+  catalogSeen.rows?.length > 0 && catalogSeen.rows.every((row) => row.company_id === NORD),
+  `n=${catalogSeen.rows?.length ?? catalogSeen.error}`,
+);
+
+const EQUIPMENT_HANDED_OVER = 'f4000000-0000-4000-8000-000000000001';
+await db.query(
+  `insert into public.equipment_catalog_items (id, company_id, name, category) values ($1, $2, 'Casque de test', 'accessory') on conflict (company_id, name) do nothing`,
+  ['f4100000-0000-4000-8000-000000000001', NORD],
+);
+await db.query(
+  `insert into public.equipment_requests (id, company_id, journey_id, catalog_item_id, status) values ($1, $2, $3, $4, 'handed_over') on conflict (id) do nothing`,
+  [EQUIPMENT_HANDED_OVER, NORD, JOURNEY_NORD, 'f4100000-0000-4000-8000-000000000001'],
+);
+
+const requestByOwner = await asUser(db, EMP_NORD, 'select id from public.equipment_requests where journey_id = $1', [JOURNEY_NORD]);
+check("L employe voit le materiel de son propre parcours", requestByOwner.rows?.length > 0, `n=${requestByOwner.rows?.length ?? requestByOwner.error}`);
+
+const requestByColleague = await asUser(db, EMP2_NORD, 'select id from public.equipment_requests where journey_id = $1', [JOURNEY_NORD]);
+check("Un collegue ne voit pas le materiel d un autre parcours", requestByColleague.rows?.length === 0, `n=${requestByColleague.rows?.length ?? requestByColleague.error}`);
+
+const acknowledgeByEmployee = await asUser(
+  db, EMP_NORD,
+  "update public.equipment_requests set status = 'acknowledged' where id = $1 and journey_id = $2 returning id",
+  [EQUIPMENT_HANDED_OVER, JOURNEY_NORD],
+);
+check(
+  "L employe accuse reception de son propre materiel",
+  acknowledgeByEmployee.ok && acknowledgeByEmployee.rowCount === 1,
+  `rows=${acknowledgeByEmployee.rowCount ?? acknowledgeByEmployee.error}`,
+);
+
+const skipAheadByEmployee = await asUser(
+  db, EMP_NORD,
+  "update public.equipment_requests set status = 'returned' where id = $1 and journey_id = $2 returning id",
+  [EQUIPMENT_HANDED_OVER, JOURNEY_NORD],
+);
+check(
+  "L employe ne peut pas faire avancer le materiel vers un autre statut que l accuse",
+  !skipAheadByEmployee.ok || skipAheadByEmployee.rowCount === 0,
+  skipAheadByEmployee.error ?? `rows=${skipAheadByEmployee.rowCount}`,
+);
+
+const assignByEmployee = await asUser(
+  db, EMP_NORD,
+  "insert into public.equipment_requests (company_id, journey_id, catalog_item_id, status) select company_id, journey_id, catalog_item_id, 'assigned' from public.equipment_requests where id = $1 limit 1",
+  [EQUIPMENT_HANDED_OVER],
+);
+check("L employe ne peut pas creer de demande de materiel", !assignByEmployee.ok || assignByEmployee.rowCount === 0, assignByEmployee.error ?? `rows=${assignByEmployee.rowCount}`);
+
 await db.end();
 console.log(failures === 0 ? '\nTOUS LES CONTROLES PASSENT' : `\n${failures} CONTROLE(S) EN ECHEC`);
 process.exit(failures === 0 ? 0 : 1);

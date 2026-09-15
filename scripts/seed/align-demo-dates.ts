@@ -58,7 +58,12 @@ async function main(): Promise<void> {
     'select company_id, site_id, observed_on, label from public.holidays',
   );
   const journeys = await db.query<JourneyRow>(
-    'select id, company_id, site_id, employee_name, status::text as status, arrival_date, end_date from public.journeys',
+    // Restreint aux parcours du seed de démonstration (préfixe a0000000...) :
+    // npm run db:verify insère ses propres parcours jetables pour éprouver la
+    // RLS, sous d'autres préfixes, jamais nettoyés entre deux runs. Les
+    // traiter ici les ferait passer pour des incohérences de démo alors
+    // qu'ils n'appartiennent pas au récit que ce script maintient.
+    "select id, company_id, site_id, employee_name, status::text as status, arrival_date, end_date from public.journeys where id::text like 'a0000000%'",
   );
   const tasks = await db.query<{ id: string; journey_id: string; title: string; due_on: string; offset_working_days: number }>(
     'select id, journey_id, title, due_on, offset_working_days from public.tasks',
