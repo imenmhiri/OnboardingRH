@@ -73,5 +73,17 @@ export function supabaseTaskDocumentRepository(client: SupabaseClient): TaskDocu
         throw new Error(`Suppression du document impossible : ${error.message}`);
       }
     },
+
+    async listByJourney(journeyId: string): Promise<readonly TaskDocumentRecord[]> {
+      const { data, error } = await client
+        .from('task_documents')
+        .select('id, company_id, task_id, storage_path, file_name, content_type, size_bytes, uploaded_by, tasks!inner(journey_id)')
+        .eq('tasks.journey_id', journeyId);
+
+      if (error || !data) {
+        return [];
+      }
+      return (data as TaskDocumentRow[]).map(toRecord);
+    },
   };
 }

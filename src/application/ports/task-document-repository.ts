@@ -23,4 +23,6 @@ export interface TaskDocumentRepository {
   insert(document: NewTaskDocument): Promise<TaskDocumentRecord>;
   findById(id: string): Promise<TaskDocumentRecord | null>;
   delete(id: string): Promise<void>;
+  /** Tous les documents deja deposes sur les taches d'un parcours donne. */
+  listByJourney(journeyId: string): Promise<readonly TaskDocumentRecord[]>;
 }
