@@ -191,6 +191,67 @@ const levelElsewhere = await asUser(
 );
 check('Une autre societe ne voit pas ces seuils', levelElsewhere.rows?.[0]?.n === 0, `n=${levelElsewhere.rows?.[0]?.n}`);
 
+// 12. Satisfaction (T-14) : la reponse est lisible par la personne et par la
+// RH, pas par le manager ni par un collegue ; un questionnaire annule
+// n'accepte plus de reponse ; une reponse ne se reecrit pas.
+const SURVEY_OPEN = 'eeeeeeee-0000-4000-8000-000000000001';
+const SURVEY_CANCELLED = 'eeeeeeee-0000-4000-8000-000000000002';
+await db.query(
+  `insert into public.surveys (id, company_id, journey_id, milestone, scheduled_on, status, cancelled_reason)
+   values ($1, $2, $3, 'day_7', current_date, 'sent', null),
+          ($4, $2, $3, 'day_30', current_date + 20, 'cancelled', 'contract_ended_before')
+   on conflict (id) do nothing`,
+  [SURVEY_OPEN, NORD, JOURNEY_NORD, SURVEY_CANCELLED],
+);
+
+const surveyBySelf = await asUser(db, EMP_NORD, 'select id from public.surveys where id = $1', [SURVEY_OPEN]);
+check("L employe voit son propre questionnaire", surveyBySelf.rows?.length === 1, `n=${surveyBySelf.rows?.length ?? surveyBySelf.error}`);
+
+const surveyByColleague = await asUser(db, EMP2_NORD, 'select id from public.surveys where id = $1', [SURVEY_OPEN]);
+check("Un collegue ne voit pas le questionnaire d un autre", surveyByColleague.rows?.length === 0, `n=${surveyByColleague.rows?.length ?? surveyByColleague.error}`);
+
+const answered = await asUser(
+  db, EMP_NORD,
+  "insert into public.survey_responses (company_id, survey_id, rating, comment) values ($1, $2, 2, 'Pas encore d acces')",
+  [NORD, SURVEY_OPEN],
+);
+check("L employe repond a son questionnaire ouvert", answered.ok && answered.rowCount === 1, answered.error ?? `rows=${answered.rowCount}`);
+// Persistee hors transaction de test pour les lectures suivantes.
+await db.query(
+  "insert into public.survey_responses (company_id, survey_id, rating, comment) values ($1, $2, 2, 'Pas encore d acces') on conflict (survey_id) do nothing",
+  [NORD, SURVEY_OPEN],
+);
+
+const readByManager = await asUser(db, MGR_NORD, 'select rating from public.survey_responses where survey_id = $1', [SURVEY_OPEN]);
+check("Le manager ne lit pas la reponse de son arrivant", readByManager.ok && readByManager.rows.length === 0, `n=${readByManager.rows?.length ?? readByManager.error}`);
+
+const readByHr = await asUser(db, RH_NORD, 'select rating from public.survey_responses where survey_id = $1', [SURVEY_OPEN]);
+check("La RH lit la reponse pour pouvoir agir", readByHr.rows?.length === 1 && readByHr.rows[0].rating === 2, JSON.stringify(readByHr.rows ?? readByHr.error));
+
+const forgedAnswer = await asUser(
+  db, EMP2_NORD,
+  "insert into public.survey_responses (company_id, survey_id, rating) values ($1, $2, 5)",
+  [NORD, SURVEY_CANCELLED],
+);
+check("Un collegue ne repond pas a la place d un autre", !forgedAnswer.ok || forgedAnswer.rowCount === 0, forgedAnswer.error ?? `rows=${forgedAnswer.rowCount}`);
+
+const lateAnswer = await asUser(
+  db, EMP_NORD,
+  "insert into public.survey_responses (company_id, survey_id, rating) values ($1, $2, 5)",
+  [NORD, SURVEY_CANCELLED],
+);
+check("Un questionnaire annule pour fin de contrat n accepte plus de reponse", !lateAnswer.ok || lateAnswer.rowCount === 0, lateAnswer.error ?? `rows=${lateAnswer.rowCount}`);
+
+const responseRewritten = await asUser(
+  db, EMP_NORD,
+  'update public.survey_responses set rating = 5 where survey_id = $1 returning id',
+  [SURVEY_OPEN],
+);
+check("Une reponse ne se reecrit pas apres coup", responseRewritten.ok && responseRewritten.rowCount === 0, `rows=${responseRewritten.rowCount ?? responseRewritten.error}`);
+
+const settingsElsewhere = await asUser(db, EMP_GULF, 'select count(*)::int as n from public.survey_settings where company_id = $1', [NORD]);
+check("Une autre societe ne voit pas les seuils de satisfaction", settingsElsewhere.rows?.[0]?.n === 0, `n=${settingsElsewhere.rows?.[0]?.n}`);
+
 await db.end();
 console.log(failures === 0 ? '\nTOUS LES CONTROLES PASSENT' : `\n${failures} CONTROLE(S) EN ECHEC`);
 process.exit(failures === 0 ? 0 : 1);

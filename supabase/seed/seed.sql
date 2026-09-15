@@ -312,3 +312,39 @@ on conflict (company_id, criticality, after_working_days_late) do nothing;
 update public.tasks
 set criticality = 'critical'
 where id = 'b3000000-0000-4000-8000-000000000002';
+
+-- ============================================================================
+-- Satisfaction : seuils, questionnaires et réponses
+-- ============================================================================
+insert into public.survey_settings (company_id, low_rating_at_or_below, drop_at_least, recurring_theme_at_least, minimum_respondents)
+values
+  ('11111111-1111-4111-8111-111111111111', 2, 2, 3, 5),
+  -- Méridien Gulf accueille moins de monde : un seuil plus bas publierait des
+  -- moyennes sur deux ou trois personnes. On garde le même plancher de 5.
+  ('22222222-2222-4222-8222-222222222222', 2, 2, 2, 5)
+on conflict (company_id) do nothing;
+
+-- Diego est en CDD court : son contrat s'arrête avant J+30. C'est le cas limite
+-- du cahier des charges, rendu visible dans la démonstration.
+update public.journeys
+set contract_type = 'cdd', end_date = current_date + 5
+where id = 'a0000000-0000-4000-8000-000000000003';
+
+insert into public.surveys (id, company_id, journey_id, milestone, scheduled_on, status, cancelled_reason, channel, sent_at, answered_at)
+values
+  -- Farida, parcours terminé : les deux questionnaires ont été remplis, et la
+  -- note s'effondre entre J+7 et J+30 — un signal faible bien réel.
+  ('c1000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000004', 'day_7', current_date - 36, 'answered', null, 'email', now() - interval '36 days', now() - interval '35 days'),
+  ('c1000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000004', 'day_30', current_date - 3, 'answered', null, 'email', now() - interval '3 days', now() - interval '2 days'),
+  -- Alice, en cours : J+7 à venir, J+30 plus tard.
+  ('c1000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000002', 'day_7', current_date + 4, 'scheduled', null, 'email', null, null),
+  ('c1000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000002', 'day_30', current_date + 29, 'scheduled', null, 'email', null, null),
+  -- Diego : J+7 maintenu, J+30 annulé à la planification plutôt qu'envoyé.
+  -- Pas de compte, donc pas d'adresse : le canal alternatif est le portail.
+  ('c1000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000003', 'day_7', current_date - 1, 'sent', null, 'portal_link', now() - interval '1 day', null),
+  ('c1000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000003', 'day_30', current_date + 22, 'cancelled', 'contract_ended_before', null, null, null);
+
+insert into public.survey_responses (company_id, survey_id, rating, comment, themes)
+values
+  ('11111111-1111-4111-8111-111111111111', 'c1000000-0000-4000-8000-000000000001', 4, 'Accueil chaleureux, poste prêt dès le premier jour.', '{accueil}'),
+  ('11111111-1111-4111-8111-111111111111', 'c1000000-0000-4000-8000-000000000002', 2, 'Toujours pas d''accès à l''outil de planification.', '{accès,matériel}');
