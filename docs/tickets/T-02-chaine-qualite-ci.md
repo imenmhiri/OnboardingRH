@@ -39,6 +39,6 @@ l'affichage de GitHub, pas la détection de l'échec.
 
 ## Dette laissée derrière
 
-- `test:run` porte encore `--passWithNoTests` : la CI serait verte avec zéro test. À retirer en T-09.
+- ~~`test:run` porte `--passWithNoTests`~~ : retiré en T-09, la CI échoue désormais sur une suite vide.
 - Le badge du README ne s'affichera pas tant que le dépôt est privé.
 - La CI tourne sur Node 22, le développement local sur Node 24.

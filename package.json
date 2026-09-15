@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "test": "vitest",
-    "test:run": "vitest run --passWithNoTests",
+    "test:run": "vitest run",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "db:start": "supabase start",
