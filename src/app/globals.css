@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/*
+  Les valeurs --brand-* sont les valeurs de repli. Elles sont remplacees a
+  l'execution par l'enregistrement de la societe (style inline sur <body>),
+  ce qui permet d'ajouter une filiale sans toucher au code.
+*/
+:root {
+  --brand-primary: oklch(0.52 0.15 255);
+  --brand-primary-contrast: oklch(0.99 0 0);
+  --brand-accent: oklch(0.72 0.14 165);
+
+  --surface: oklch(0.99 0.004 255);
+  --surface-raised: oklch(1 0 0);
+  --border: oklch(0.91 0.008 255);
+  --text: oklch(0.24 0.02 260);
+  --text-muted: oklch(0.52 0.02 260);
+}
+
+@theme inline {
+  --color-brand: var(--brand-primary);
+  --color-brand-contrast: var(--brand-primary-contrast);
+  --color-accent: var(--brand-accent);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --font-sans: var(--font-app-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--surface);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

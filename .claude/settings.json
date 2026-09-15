@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm run test:*)",
+      "PowerShell(npm run lint:*)",
+      "PowerShell(npm run typecheck:*)",
+      "PowerShell(npm run build:*)",
+      "PowerShell(npm ci)",
+      "PowerShell(npm install)",
+      "PowerShell(npx tsc:*)",
+      "PowerShell(npx vitest:*)",
+      "PowerShell(npx supabase db diff:*)",
+      "PowerShell(git status:*)",
+      "PowerShell(git diff:*)",
+      "PowerShell(git log:*)",
+      "PowerShell(git branch:*)",
+      "PowerShell(git switch:*)",
+      "PowerShell(git add:*)",
+      "PowerShell(git commit:*)",
+      "PowerShell(gh issue list:*)",
+      "PowerShell(gh issue view:*)",
+      "PowerShell(gh pr view:*)",
+      "PowerShell(gh pr diff:*)"
+    ],
+    "ask": [
+      "PowerShell(git push:*)",
+      "PowerShell(gh pr create:*)",
+      "PowerShell(gh pr merge:*)",
+      "PowerShell(npx supabase db reset:*)",
+      "PowerShell(npx supabase db push:*)",
+      "PowerShell(vercel:*)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.*.local)",
+      "PowerShell(git push --force:*)",
+      "PowerShell(git reset --hard:*)"
+    ]
+  }
+}
