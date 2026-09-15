@@ -17,6 +17,26 @@ export function client() {
   });
 }
 
+// GoTrue exige ces colonnes non nulles. Laissees a NULL, elles cassent l'API
+// d'administration : listUsers renvoie "Database error finding users", et le
+// symptome apparait tres loin d'ici.
+const INSERT_USER = `
+  insert into auth.users (
+    id, instance_id, aud, role, email,
+    raw_app_meta_data, raw_user_meta_data,
+    confirmation_token, recovery_token, email_change_token_new, email_change,
+    email_change_token_current, phone_change, phone_change_token, reauthentication_token,
+    encrypted_password, created_at, updated_at
+  )
+  values (
+    $1, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', $2,
+    '{}'::jsonb, '{}'::jsonb,
+    '', '', '', '', '', '', '', '',
+    '', now(), now()
+  )
+  on conflict (id) do nothing
+`;
+
 /** Creates the three test users on top of the demo seed. */
 export async function installUsers(db) {
   const users = [
@@ -25,12 +45,7 @@ export async function installUsers(db) {
     [EMP_GULF, 'employe@meridien-gulf.test', 'Emma Employée', GULF, 'employee'],
   ];
   for (const [id, email, name, company, role] of users) {
-    await db.query(
-      `insert into auth.users (id, instance_id, aud, role, email)
-       values ($1, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', $2)
-       on conflict (id) do nothing`,
-      [id, email],
-    );
+    await db.query(INSERT_USER, [id, email]);
     await db.query(
       `insert into public.profiles (id, full_name) values ($1, $2)
        on conflict (id) do nothing`,

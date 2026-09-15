@@ -60,7 +60,7 @@ let failures = 0;
 for (const scheme of ['light', 'dark']) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, colorScheme: scheme });
   const page = await context.newPage();
-  await page.goto('http://127.0.0.1:3000/design', { waitUntil: 'networkidle' });
+  await page.goto(`http://127.0.0.1:3000${process.argv[2] ?? '/design'}`, { waitUntil: 'networkidle' });
   const { checked, problems } = await page.evaluate(MEASURE);
   console.log(`\nTheme ${scheme} : ${checked} elements textuels mesures`);
   if (problems.length === 0) {
