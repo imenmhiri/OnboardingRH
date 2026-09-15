@@ -72,8 +72,31 @@ implémentation d'infrastructure.
 - **Accessibilité.** WCAG AA visé : navigation clavier, lien d'évitement, focus visible, et jamais
   la couleur seule pour porter une information.
 
+## Jeu de démonstration
+
+`npm run db:reset` rejoue les migrations puis `supabase/seed/seed.sql` : deux sociétés dissemblables
+(palette, semaine de travail, sites, fériés), un template de parcours avec ses dépendances, et quatre
+parcours à des stades différents — à venir, en cours, bloqué (compte IT jamais créé, en retard) et
+terminé — dont une tâche mutualisée entre deux arrivées. Les dates sont relatives à `current_date` :
+la démonstration reste à jour quelle que soit la date à laquelle elle est rejouée.
+
+Comptes de démonstration (mot de passe commun `OnboardingDemo!2026`) :
+
+| Rôle | Email | Société |
+| --- | --- | --- |
+| RH | `rh@atelier-nord.demo` | Atelier Nord |
+| Manager | `manager@atelier-nord.demo` | Atelier Nord |
+| IT | `it@atelier-nord.demo` | Atelier Nord |
+| Employé | `alice@atelier-nord.demo` | Atelier Nord |
+| Manager **et** employé | `nadia@groupe.demo` | Atelier Nord (manager) et Méridien Gulf (employé) |
+
+Le dernier compte démontre la bascule de société : même personne, rôle et marque différents selon la
+société active.
+
 ## Limites connues
 
 - Supabase, Resend, l'intégration agenda et les workflows n8n ne sont pas encore branchés — les
   répertoires correspondants sont créés mais vides.
-- Pas encore de déploiement public ni de jeu de données de démonstration.
+- Le cockpit RH et le portail employé ne consomment pas encore ce jeu de données : ce sont des
+  coquilles en attente de T-17 et T-18. Les données sont prêtes, les écrans ne les lisent pas.
+- Pas encore de déploiement public.
