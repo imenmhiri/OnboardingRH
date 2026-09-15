@@ -161,6 +161,36 @@ const absenceElsewhere = await asUser(
 );
 check("Une autre societe ne voit pas ces absences", absenceElsewhere.rows?.[0]?.n === 0, `n=${absenceElsewhere.rows?.[0]?.n}`);
 
+// 11. Seuils d escalade (T-13) : memes regles que le reste — lecture aux
+// membres, ecriture reservee a la RH, cloisonnement par societe.
+const levelsSeen = await asUser(db, MGR_NORD, 'select company_id from public.escalation_levels');
+check(
+  'Un membre lit les seuils d escalade de sa societe, et rien d une autre',
+  levelsSeen.rows?.length > 0 && levelsSeen.rows.every((row) => row.company_id === NORD),
+  `n=${levelsSeen.rows?.length ?? levelsSeen.error}`,
+);
+
+const levelByManager = await asUser(
+  db, MGR_NORD,
+  "insert into public.escalation_levels (company_id, criticality, after_working_days_late, recipient) values ($1, 'standard', 99, 'owner') returning id",
+  [NORD],
+);
+check('Un manager ne cree pas de seuil d escalade', !levelByManager.ok || levelByManager.rowCount === 0, levelByManager.error ?? `rows=${levelByManager.rowCount}`);
+
+const levelByHr = await asUser(
+  db, RH_NORD,
+  "insert into public.escalation_levels (company_id, criticality, after_working_days_late, recipient) values ($1, 'standard', 99, 'owner') returning id",
+  [NORD],
+);
+check('La RH cree un seuil d escalade pour sa societe', levelByHr.ok && levelByHr.rowCount === 1, `rows=${levelByHr.rowCount ?? levelByHr.error}`);
+
+const levelElsewhere = await asUser(
+  db, EMP_GULF,
+  'select count(*)::int as n from public.escalation_levels where company_id = $1',
+  [NORD],
+);
+check('Une autre societe ne voit pas ces seuils', levelElsewhere.rows?.[0]?.n === 0, `n=${levelElsewhere.rows?.[0]?.n}`);
+
 await db.end();
 console.log(failures === 0 ? '\nTOUS LES CONTROLES PASSENT' : `\n${failures} CONTROLE(S) EN ECHEC`);
 process.exit(failures === 0 ? 0 : 1);
