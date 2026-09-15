@@ -28,8 +28,15 @@ const config = [
     },
   },
   {
+    // Les fixtures de test sont exclues : une doublure de port a besoin d'une
+    // notion du temps, alors que le code de production doit passer par Clock.
     files: ['src/application/**/*.ts'],
+    ignores: ['src/application/**/*.test.ts', 'src/application/**/*-test-fixtures.ts'],
     rules: {
+      'no-restricted-globals': [
+        'error',
+        { name: 'Date', message: 'Injecter le port Clock — voir application/ports/clock.ts.' },
+      ],
       'no-restricted-imports': [
         'error',
         {

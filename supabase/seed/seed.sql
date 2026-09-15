@@ -159,6 +159,7 @@ declare
   template constant uuid := 'f0000000-0000-4000-8000-000000000001';
   manager_id constant uuid := 'e0000000-0000-4000-8000-000000000002';
   it_id constant uuid := 'e0000000-0000-4000-8000-000000000003';
+  alice_id constant uuid := 'e0000000-0000-4000-8000-000000000004';
   claire_id constant uuid := 'e0000000-0000-4000-8000-000000000006';
 
   -- Quatre parcours, à des stades différents.
@@ -167,10 +168,14 @@ declare
   j_blocked  constant uuid := 'a0000000-0000-4000-8000-000000000003'; -- bloqué
   j_done     constant uuid := 'a0000000-0000-4000-8000-000000000004'; -- terminé
 begin
+  -- Les deux comptes employés de démonstration portent chacun un parcours, à un
+  -- stade différent : sans cela, se connecter en tant qu'employé ne montrerait
+  -- rien. Diego et Farida restent sans compte, ce qui est le cas réel d'une
+  -- embauche dont l'accès n'est pas encore créé.
   insert into public.journeys (id, company_id, site_id, template_id, employee_id, employee_name, job_family, contract_type, manager_id, arrival_date, status)
   values
-    (j_upcoming, nord, site_lille, template, null, 'Bastien Bienvenue', 'atelier', 'cdi', manager_id, current_date + 10, 'scheduled'),
-    (j_progress, nord, site_lille, template, claire_id, 'Claire Collègue', 'atelier', 'cdi', manager_id, current_date - 3, 'in_progress'),
+    (j_upcoming, nord, site_lille, template, claire_id, 'Claire Collègue', 'atelier', 'cdi', manager_id, current_date + 10, 'scheduled'),
+    (j_progress, nord, site_lille, template, alice_id, 'Alice Arrivante', 'atelier', 'cdi', manager_id, current_date - 3, 'in_progress'),
     (j_blocked, nord, site_lille, template, null, 'Diego Retardé', 'atelier', 'cdi', manager_id, current_date - 8, 'in_progress'),
     (j_done, nord, site_lille, template, null, 'Farida Fin', 'atelier', 'cdi', manager_id, current_date - 45, 'completed');
 

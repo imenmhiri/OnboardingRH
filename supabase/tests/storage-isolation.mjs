@@ -10,14 +10,9 @@ import {
   asUser,
   client,
   EMP_GULF,
-  GULF,
   installJourneys,
   installUsers,
   IT_NORD,
-  JOURNEY_NORD,
-  MGR_NORD,
-  NORD,
-  RH_NORD,
   TASK_IT,
 } from './fixtures.mjs';
 
