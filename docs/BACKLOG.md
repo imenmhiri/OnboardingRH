@@ -30,7 +30,7 @@ de terminé commune sont dans [WORKFLOW.md](WORKFLOW.md).
 | # | Ticket | Couches | Agent | Dépend de | État |
 | --- | --- | --- | --- | --- | --- |
 | T-09 | [Jours ouvrés et échéances](tickets/T-09-moteur-jours-ouvres.md) | domain/scheduling | domain-expert | T-01 | fait |
-| T-10 | [Graphe de dépendances](tickets/T-10-graphe-dependances-taches.md) | domain/tasks | domain-expert | T-09 | jet sur branche |
+| T-10 | [Graphe de dépendances](tickets/T-10-graphe-dependances-taches.md) | domain/tasks | domain-expert | T-09 | fait |
 | T-11 | [Templates et instanciation](tickets/T-11-templates-instanciation-parcours.md) | domain/templates | domain-expert | T-09, T-10 | jet sur branche |
 | T-12 | [Responsables et repli](tickets/T-12-resolution-responsables.md) | domain/tasks | domain-expert | T-10, T-11 | à faire |
 | T-13 | [Relance et escalade](tickets/T-13-relance-escalade.md) | domain/escalation | domain-expert | T-09, T-10, T-12 | à faire |
@@ -84,7 +84,6 @@ Quatre tickets ont un premier jet écrit avant que le backlog ne soit posé. Le 
 
 | Ticket | Branche |
 | --- | --- |
-| T-10 | `feat/4-task-dependency-graph` |
 | T-11 | `feat/5-journey-template-instantiation` |
 
 Aucune de ces branches n'a été vérifiée contre une base Supabase réelle : la CLI Supabase et Docker
