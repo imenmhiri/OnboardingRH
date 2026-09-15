@@ -5,7 +5,7 @@ import { FlatCompat } from '@eslint/eslintrc';
 const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta.url)) });
 
 const config = [
-  { ignores: ['.next/**', 'node_modules/**', 'coverage/**', 'next-env.d.ts'] },
+  { ignores: ['.next/**', 'node_modules/**', 'coverage/**', 'next-env.d.ts', 'scripts/**'] },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
     // The domain layer must stay pure: no framework, no I/O, no ambient clock.
