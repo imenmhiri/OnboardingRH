@@ -34,7 +34,7 @@ de terminé commune sont dans [WORKFLOW.md](WORKFLOW.md).
 | T-11 | [Templates et instanciation](tickets/T-11-templates-instanciation-parcours.md) | domain/templates | domain-expert | T-09, T-10 | fait |
 | T-12 | [Responsables et repli](tickets/T-12-resolution-responsables.md) | domain/tasks | domain-expert | T-10, T-11 | fait |
 | T-13 | [Relance et escalade](tickets/T-13-relance-escalade.md) | domain/escalation | domain-expert | T-09, T-10, T-12 | fait |
-| T-14 | [Satisfaction J+7 / J+30](tickets/T-14-satisfaction-j7-j30.md) | domain/surveys | domain-expert, db-architect | T-06, T-09 | à faire |
+| T-14 | [Satisfaction J+7 / J+30](tickets/T-14-satisfaction-j7-j30.md) | domain/surveys | domain-expert, db-architect | T-06, T-09 | fait |
 | T-15 | [Cycle de vie du matériel](tickets/T-15-cycle-de-vie-materiel.md) | domain/equipment | domain-expert, db-architect | T-06 | à faire |
 
 ## Surfaces produit
