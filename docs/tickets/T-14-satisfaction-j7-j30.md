@@ -78,17 +78,22 @@ refuse la réponse, une réponse ne se réécrit pas. 55 contrôles d'isolation 
 sur la sortie masquait l'erreur, laissant voir une seule ligne « PASSENT ». Corrigé ; la vérification
 contrôle désormais le code de sortie et le décompte des contrôles, pas une ligne de texte.
 
-**Dans le jeu de démonstration, non corrigé — voir la dette** : le seed pose les dates en décalages
-*calendaires* (`current_date + 4`) alors que le domaine les calcule en jours *ouvrés*. Le statut de
-chaque questionnaire est juste, mais les dates diffèrent de celles que le moteur produirait — Farida a
-même un J+7 posé un dimanche.
+**Dans le jeu de démonstration, corrigé depuis** : le seed posait les dates en décalages
+*calendaires* (`current_date + 4`) alors que le domaine les calcule en jours *ouvrés*. 25 dates
+s'écartaient du moteur, dont de vrais week-ends — Alice et Farida « arrivaient » un samedi. Le J+7 de
+Diego était en outre marqué envoyé alors que le moteur le prévoyait le lendemain.
+
+Une affirmation de ce paragraphe était fausse dans sa première version : « un J+7 de Farida posé un
+dimanche ». Mes scripts de vérification convertissaient les colonnes `date` en objets `Date`
+JavaScript, lus à minuit local puis rendus en UTC : sur une machine en UTC+1, chaque date reculait d'un
+jour. Le J+7 de Farida tombait en réalité un lundi. Le script de correction lit désormais les dates en
+texte.
 
 ## Dette laissée derrière
 
-- **Dates du seed incohérentes avec le moteur**, pour les questionnaires comme pour les échéances de
-  tâches posées en T-08. Un seed SQL ne peut pas appeler `domain/scheduling`, et réécrire le calcul
-  des jours ouvrés en SQL dupliquerait une règle que CLAUDE.md impose de garder dans le domaine. La
-  bonne correction est un script de seed qui passe par le domaine ; c'est un ticket à part entière.
+- ~~Dates du seed incohérentes avec le moteur~~ — **résolue** : `scripts/seed/align-demo-dates.ts`
+  recalcule arrivées, échéances et questionnaires avec `domain/scheduling` et `domain/surveys`, et
+  s'exécute à chaque `npm run db:reset`. `npm run db:check-dates` vérifie qu'aucun écart ne subsiste.
 - Rien ne crée encore les questionnaires en production : c'est W3 (T-23), qui appellera
   `planSurveys` et `resolveSurveyChannel`.
 - Aucune suppression de réponse n'est possible, pas même pour un droit à l'effacement : hors périmètre,

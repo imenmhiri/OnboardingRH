@@ -80,6 +80,11 @@ parcours à des stades différents — à venir, en cours, bloqué (compte IT ja
 terminé — dont une tâche mutualisée entre deux arrivées. Les dates sont relatives à `current_date` :
 la démonstration reste à jour quelle que soit la date à laquelle elle est rejouée.
 
+Un seed SQL ne sait pas compter en jours ouvrés, et recopier ce calcul en SQL dupliquerait une règle
+du domaine. `npm run db:reset` enchaîne donc le seed avec `scripts/seed/align-demo-dates.ts`, qui
+recalcule arrivées, échéances et questionnaires avec le vrai moteur (week-ends et fériés de chaque
+société et de chaque site). `npm run db:check-dates` vérifie qu'aucune date ne s'en écarte.
+
 Comptes de démonstration (mot de passe commun `OnboardingDemo!2026`) :
 
 | Rôle | Email | Société | Parcours rattaché |
