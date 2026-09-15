@@ -286,3 +286,29 @@ values (
   current_date + 6,
   'Congés'
 );
+
+-- ============================================================================
+-- Seuils de relance et tâche critique
+-- ============================================================================
+-- Chez Atelier Nord, une tâche standard relance son propriétaire dès un jour
+-- ouvré de retard, escalade au manager à 3 jours, à la RH à 6. Une tâche
+-- critique saute l'échelon propriétaire et va droit au manager, puis à la RH
+-- au bout de 2 jours seulement — parce que « retard critique » (W2) n'attend
+-- pas une semaine avant d'alerter quelqu'un qui peut agir.
+insert into public.escalation_levels (company_id, criticality, after_working_days_late, recipient)
+values
+  ('11111111-1111-4111-8111-111111111111', 'standard', 1, 'owner'),
+  ('11111111-1111-4111-8111-111111111111', 'standard', 3, 'manager'),
+  ('11111111-1111-4111-8111-111111111111', 'standard', 6, 'hr_admin'),
+  ('11111111-1111-4111-8111-111111111111', 'critical', 1, 'manager'),
+  ('11111111-1111-4111-8111-111111111111', 'critical', 2, 'hr_admin'),
+  ('22222222-2222-4222-8222-222222222222', 'standard', 2, 'owner'),
+  ('22222222-2222-4222-8222-222222222222', 'standard', 5, 'hr_admin'),
+  ('22222222-2222-4222-8222-222222222222', 'critical', 1, 'hr_admin')
+on conflict (company_id, criticality, after_working_days_late) do nothing;
+
+-- La tâche IT jamais créée du parcours bloqué : c'est elle qui a le plus de
+-- conséquences en cascade, donc elle est critique dans le jeu de démonstration.
+update public.tasks
+set criticality = 'critical'
+where id = 'b3000000-0000-4000-8000-000000000002';
