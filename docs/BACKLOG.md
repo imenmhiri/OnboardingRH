@@ -19,7 +19,7 @@ de terminé commune sont dans [WORKFLOW.md](WORKFLOW.md).
 
 | # | Ticket | Couches | Agent | Dépend de | État |
 | --- | --- | --- | --- | --- | --- |
-| T-04 | [Sociétés, sites, membres, fériés](tickets/T-04-schema-societes-sites-feries.md) | supabase | db-architect | T-01 | jet sur branche |
+| T-04 | [Sociétés, sites, membres, fériés](tickets/T-04-schema-societes-sites-feries.md) | supabase | db-architect | T-01 | fait |
 | T-05 | [Authentification et société active](tickets/T-05-authentification-societe-active.md) | app, infra | db-architect, ui-builder | T-04 | à faire |
 | T-06 | [Parcours, tâches, documents](tickets/T-06-schema-parcours-taches-documents.md) | supabase | db-architect | T-04 | à faire |
 | T-07 | [Stockage privé et liens signés](tickets/T-07-storage-liens-signes.md) | infra | db-architect | T-06 | à faire |
@@ -85,7 +85,6 @@ Quatre tickets ont un premier jet écrit avant que le backlog ne soit posé. Le 
 | Ticket | Branche |
 | --- | --- |
 | T-09 | `feat/2-working-day-scheduling` |
-| T-04 | `feat/3-company-configuration-schema` |
 | T-10 | `feat/4-task-dependency-graph` |
 | T-11 | `feat/5-journey-template-instantiation` |
 
