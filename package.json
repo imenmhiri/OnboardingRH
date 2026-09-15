@@ -10,7 +10,12 @@
     "test": "vitest",
     "test:run": "vitest run --passWithNoTests",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:diff": "supabase db diff",
+    "db:push": "supabase db push"
   },
   "dependencies": {
     "next": "^15.5.25",
@@ -31,6 +36,7 @@
     "eslint-config-next": "^15.5.25",
     "jsdom": "^30.0.1",
     "postcss": "^8.5.28",
+    "supabase": "^2.117.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vite": "^7.3.6",
