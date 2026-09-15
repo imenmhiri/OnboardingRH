@@ -22,7 +22,7 @@ de terminé commune sont dans [WORKFLOW.md](WORKFLOW.md).
 | T-04 | [Sociétés, sites, membres, fériés](tickets/T-04-schema-societes-sites-feries.md) | supabase | db-architect | T-01 | fait |
 | T-05 | [Authentification et société active](tickets/T-05-authentification-societe-active.md) | app, infra | db-architect, ui-builder | T-04 | fait |
 | T-06 | [Parcours, tâches, documents](tickets/T-06-schema-parcours-taches-documents.md) | supabase | db-architect | T-04 | fait |
-| T-07 | [Stockage privé et liens signés](tickets/T-07-storage-liens-signes.md) | infra | db-architect | T-06 | à faire |
+| T-07 | [Stockage privé et liens signés](tickets/T-07-storage-liens-signes.md) | infra | db-architect | T-06 | fait |
 | T-08 | [Jeu de démonstration](tickets/T-08-jeu-de-demonstration.md) | supabase/seed | db-architect | T-04, T-06 | à faire |
 
 ## Domaine métier
