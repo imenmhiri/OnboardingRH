@@ -124,6 +124,43 @@ await db.query('rollback');
 check('Supprimer un parcours emporte ses taches', remainingTasks.rows[0].n === 0, `n=${remainingTasks.rows[0].n}`);
 check('Supprimer un parcours conserve sa trace d audit', remainingAudit.rows[0].n > 0, `n=${remainingAudit.rows[0].n}`);
 
+// 10. Regles d attribution et absences (T-12) : lisibles par les membres,
+// ecrites par la RH seule, et cloisonnees par societe comme le reste.
+const rulesSeen = await asUser(db, MGR_NORD, 'select company_id from public.assignment_rules');
+check(
+  'Un membre lit les regles d attribution de sa societe, et rien d une autre',
+  rulesSeen.rows?.length > 0 && rulesSeen.rows.every((row) => row.company_id === NORD),
+  `n=${rulesSeen.rows?.length ?? rulesSeen.error}`,
+);
+
+const ruleByManager = await asUser(
+  db, MGR_NORD,
+  "update public.assignment_rules set fallback_chain = '{hr_admin}' where company_id = $1 returning id",
+  [NORD],
+);
+check("Un manager ne reecrit pas la chaine de repli", ruleByManager.ok && ruleByManager.rowCount === 0, `rows=${ruleByManager.rowCount ?? ruleByManager.error}`);
+
+const ruleByHr = await asUser(
+  db, RH_NORD,
+  "update public.assignment_rules set fallback_chain = '{manager,hr_admin}' where company_id = $1 and owner_role = 'manager' returning id",
+  [NORD],
+);
+check('La RH configure la chaine de repli de sa societe', ruleByHr.ok && ruleByHr.rowCount === 1, `rows=${ruleByHr.rowCount ?? ruleByHr.error}`);
+
+const absencesSeen = await asUser(db, MGR_NORD, 'select company_id from public.absences');
+check(
+  'Les absences sont visibles aux collegues de la societe',
+  absencesSeen.ok && absencesSeen.rows.every((row) => row.company_id === NORD),
+  `n=${absencesSeen.rows?.length ?? absencesSeen.error}`,
+);
+
+const absenceElsewhere = await asUser(
+  db, EMP_GULF,
+  "select count(*)::int as n from public.absences where company_id = $1",
+  [NORD],
+);
+check("Une autre societe ne voit pas ces absences", absenceElsewhere.rows?.[0]?.n === 0, `n=${absenceElsewhere.rows?.[0]?.n}`);
+
 await db.end();
 console.log(failures === 0 ? '\nTOUS LES CONTROLES PASSENT' : `\n${failures} CONTROLE(S) EN ECHEC`);
 process.exit(failures === 0 ? 0 : 1);

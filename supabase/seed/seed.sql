@@ -248,3 +248,41 @@ begin
     ('b4000000-0000-4000-8000-000000000005', 'b4000000-0000-4000-8000-000000000003'),
     ('b4000000-0000-4000-8000-000000000006', 'b4000000-0000-4000-8000-000000000005');
 end $$;
+
+-- ============================================================================
+-- Chaînes de repli et absences
+-- ============================================================================
+-- La chaîne est une donnée par société : les deux filiales n'ont pas la même.
+-- Chez Atelier Nord, une tâche manager retombe sur le manager du manager puis
+-- sur la RH ; chez Méridien Gulf, il n'y a pas d'échelon intermédiaire, elle
+-- retombe directement sur la RH. Aucun code ne connaît cette différence.
+insert into public.assignment_rules (company_id, owner_role, fallback_chain)
+values
+  ('11111111-1111-4111-8111-111111111111', 'manager', '{manager,manager_of_manager,hr_admin}'),
+  ('11111111-1111-4111-8111-111111111111', 'it', '{it_team,hr_admin}'),
+  ('11111111-1111-4111-8111-111111111111', 'hr_admin', '{hr_admin}'),
+  ('11111111-1111-4111-8111-111111111111', 'employee', '{employee,manager}'),
+  ('22222222-2222-4222-8222-222222222222', 'manager', '{manager,hr_admin}'),
+  ('22222222-2222-4222-8222-222222222222', 'it', '{it_team,hr_admin}'),
+  ('22222222-2222-4222-8222-222222222222', 'hr_admin', '{hr_admin}'),
+  ('22222222-2222-4222-8222-222222222222', 'employee', '{employee,manager}')
+on conflict (company_id, owner_role) do nothing;
+
+-- Le manager rend compte à la RH : sans ce rattachement, le deuxième maillon
+-- de la chaîne d'Atelier Nord n'aurait personne à désigner.
+update public.company_members
+set reports_to = 'e0000000-0000-4000-8000-000000000001'
+where company_id = '11111111-1111-4111-8111-111111111111'
+  and user_id = 'e0000000-0000-4000-8000-000000000002';
+
+-- Une absence bien réelle, calée sur les échéances du parcours bloqué : c'est
+-- elle qui rend le cas limite « manager absent » démontrable à l'écran, et pas
+-- seulement dans un test.
+insert into public.absences (company_id, person_id, starts_on, ends_on, reason)
+values (
+  '11111111-1111-4111-8111-111111111111',
+  'e0000000-0000-4000-8000-000000000002',
+  current_date - 4,
+  current_date + 6,
+  'Congés'
+);
