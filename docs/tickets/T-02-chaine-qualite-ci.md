@@ -19,6 +19,6 @@ push, elles reposent sur la discipline de celui qui commite.
 
 ## Définition de terminé
 
-- [ ] Une PR dont un test échoue est visiblement rouge.
+- [ ] Une PR dont un test échoue est visiblement rouge. *(non vérifiable tant que rien n est poussé)*
 - [ ] Le workflow tourne en moins de trois minutes sur un cache chaud.
 - [ ] Aucune clé ni secret dans le fichier de workflow.

@@ -1,5 +1,7 @@
 # OnboardingRH
 
+[![CI](https://github.com/imenmhiri/OnboardingRH/actions/workflows/ci.yml/badge.svg)](https://github.com/imenmhiri/OnboardingRH/actions/workflows/ci.yml)
+
 Plateforme d'intégration multi-sociétés : à partir d'une embauche validée, elle génère le parcours
 adapté (société × métier × site), assigne les tâches à la RH, au manager, à l'IT et à l'employé,
 calcule les échéances en jours ouvrés, relance les retards et mesure la satisfaction à J+7 et J+30.
