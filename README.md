@@ -5,7 +5,8 @@ adapté (société × métier × site), assigne les tâches à la RH, au manager
 calcule les échéances en jours ouvrés, relance les retards et mesure la satisfaction à J+7 et J+30.
 
 > **État du projet** — socle technique en place (Next.js, TypeScript strict, Tailwind, Vitest,
-> découpage en couches). Les fonctionnalités métier arrivent ticket par ticket ; voir
+> découpage en couches). Le périmètre est découpé en 28 tickets dans
+> [docs/BACKLOG.md](docs/BACKLOG.md), traités un par un selon
 > [docs/WORKFLOW.md](docs/WORKFLOW.md).
 
 ## Installation
