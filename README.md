@@ -85,6 +85,20 @@ du domaine. `npm run db:reset` enchaîne donc le seed avec `scripts/seed/align-d
 recalcule arrivées, échéances et questionnaires avec le vrai moteur (week-ends et fériés de chaque
 société et de chaque site). `npm run db:check-dates` vérifie qu'aucune date ne s'en écarte.
 
+### Voir les règles métier sans écran
+
+Les règles de T-10 à T-15 (blocages, templates, responsables, relances, satisfaction, matériel) ne
+sont pas encore affichées par l'interface. `npm run demo:report` les rend visibles : il lit le jeu de
+démonstration et fait tourner le vrai moteur du domaine, sans rien écrire en base.
+
+```bash
+npm run db:reset      # base propre, dates alignées
+npm run demo:report   # rapport lisible, ticket par ticket
+```
+
+Pour parcourir les tables elles-mêmes, Supabase Studio est disponible sur `http://127.0.0.1:54323`
+tant que la stack locale tourne.
+
 Comptes de démonstration (mot de passe commun `OnboardingDemo!2026`) :
 
 | Rôle | Email | Société | Parcours rattaché |

@@ -15,6 +15,7 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset && tsx scripts/seed/align-demo-dates.ts",
     "db:check-dates": "tsx scripts/seed/align-demo-dates.ts --check",
+    "demo:report": "tsx scripts/demo/report.ts",
     "db:diff": "supabase db diff",
     "db:push": "supabase db push",
     "db:verify": "node supabase/tests/rls-isolation.mjs && node supabase/tests/journeys-isolation.mjs && node supabase/tests/storage-isolation.mjs"
