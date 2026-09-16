@@ -72,6 +72,7 @@ function baseInput(overrides: Partial<ValidatedHireInput> = {}): ValidatedHireIn
     managerId: 'user-manager',
     arrivalDate: '2026-04-20',
     hireReference: 'ats-hire-001',
+    personalEmail: null,
     ...overrides,
   };
 }
@@ -97,7 +98,7 @@ describe('createJourneyFromValidatedHire', () => {
 
     const result = await createJourneyFromValidatedHire(p, baseInput());
 
-    expect(result).toMatchObject({ ok: true, status: 'created', arrivalInPast: false });
+    expect(result).toMatchObject({ ok: true, status: 'created', arrivalInPast: false, sendWelcomeEmailAt: '2026-04-15' });
     expect(result.ok && journeyRepo.journeys.has(result.journeyId)).toBe(true);
 
     const tasks = result.ok ? journeyRepo.tasksByJourney.get(result.journeyId) : undefined;
@@ -118,6 +119,9 @@ describe('createJourneyFromValidatedHire', () => {
       ]),
     );
     expect(events.every((e) => e.actorId === null)).toBe(true);
+
+    const welcomeEmailEvent = events.find((e) => e.action === 'journey.welcome_email_pending');
+    expect(welcomeEmailEvent?.payload).toMatchObject({ sendWelcomeEmailAt: '2026-04-15' });
   });
 
   it('cas limite : meme embauche recue deux fois, aucun second parcours', async () => {

@@ -33,6 +33,7 @@ export function supabaseJourneyRepository(client: SupabaseClient): JourneyReposi
         manager_id: input.managerId,
         arrival_date: input.arrivalDate,
         hire_reference: input.hireReference,
+        personal_email: input.personalEmail,
         status: 'scheduled',
       });
 

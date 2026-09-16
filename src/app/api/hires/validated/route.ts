@@ -17,7 +17,12 @@ import { createSystemClock } from '@/infrastructure/clock/system-clock';
  *
  * Payload attendu : des identifiants, jamais de donnee personnelle au-dela du
  * nom (deja porte par `journeys.employee_name` dans tout le reste de
- * l'application, pas une fuite propre a ce webhook).
+ * l'application, pas une fuite propre a ce webhook) et, depuis T-24, de
+ * l'email personnel optionnel — seule source possible pour un employe qui
+ * n'a pas encore de compte, au meme titre que le nom. Cette adresse est
+ * persistee sur `journeys.personal_email` et n'est ensuite jamais reprise
+ * dans un payload de notification : l'email de bienvenue la relit lui-meme
+ * au moment de l'envoi differe (voir send-welcome-email.ts).
  */
 
 interface ValidatedHirePayload {
@@ -30,6 +35,7 @@ interface ValidatedHirePayload {
   readonly managerId?: unknown;
   readonly arrivalDate?: unknown;
   readonly hireReference?: unknown;
+  readonly personalEmail?: unknown;
 }
 
 function isAuthorized(request: NextRequest): boolean {
@@ -90,6 +96,7 @@ function parsePayload(body: ValidatedHirePayload): { input: ValidatedHireInput }
       managerId: optionalString(body.managerId),
       arrivalDate: arrivalDate as string,
       hireReference: hireReference as string,
+      personalEmail: optionalString(body.personalEmail),
     },
   };
 }
@@ -136,7 +143,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   if (result.ok) {
     return NextResponse.json(
-      { journeyId: result.journeyId, status: result.status },
+      {
+        journeyId: result.journeyId,
+        status: result.status,
+        // n8n attend cette date avant d'appeler /api/notifications/welcome-email
+        // (envoi differe, voir workflows/w1-validated-hire.json).
+        ...(result.status === 'created' ? { sendWelcomeEmailAt: result.sendWelcomeEmailAt } : {}),
+      },
       { status: result.status === 'created' ? 201 : 200 },
     );
   }
