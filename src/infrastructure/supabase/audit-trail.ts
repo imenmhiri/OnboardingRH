@@ -14,7 +14,7 @@ export function supabaseAuditTrail(client: SupabaseClient): AuditTrail {
     async record(event: AuditEvent): Promise<void> {
       const { error } = await client.from('audit_events').insert({
         company_id: event.companyId,
-        actor_id: event.actorId,
+        actor_id: event.actorId ?? null,
         action: event.action,
         journey_id: event.journeyId ?? null,
         task_id: event.taskId ?? null,

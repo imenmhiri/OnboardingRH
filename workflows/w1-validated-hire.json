@@ -1,0 +1,204 @@
+{
+  "name": "W1 — Embauche validée",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "w1-embauche-validee",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "1f2b1a10-0001-4a11-8a11-000000000001",
+      "name": "Webhook — Embauche validée",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-140, 260],
+      "webhookId": "w1-embauche-validee",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "n8n-webhook-secret",
+          "name": "Secret partagé OnboardingRH (N8N_WEBHOOK_SECRET)"
+        }
+      },
+      "notes": "Authentification par en-tête (x-webhook-secret) vérifiée à la fois ici et, de façon décisive, par la route API elle-même — un secret invalide n'atteint jamais le cas d'usage."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ONBOARDING_APP_URL }}/api/hires/validated",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  companyId: $json.body.companyId,\n  siteId: $json.body.siteId,\n  jobFamily: $json.body.jobFamily,\n  contractType: $json.body.contractType,\n  employeeName: $json.body.employeeName,\n  employeeId: $json.body.employeeId ?? null,\n  managerId: $json.body.managerId ?? null,\n  arrivalDate: $json.body.arrivalDate,\n  hireReference: $json.body.hireReference\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "1f2b1a10-0002-4a11-8a11-000000000002",
+      "name": "Appeler l'application — Créer le parcours",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [100, 260],
+      "notes": "Aucune règle métier ici : le nœud transmet des identifiants et relaie la décision de src/application/use-cases/create-journey-from-validated-hire.ts. Le template sélectionné, les échéances et la résolution des responsables sont calculés côté application, jamais dans n8n."
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.statusCode }}",
+                    "rightValue": 201,
+                    "operator": { "type": "number", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Créé"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.statusCode }}",
+                    "rightValue": 200,
+                    "operator": { "type": "number", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Doublon (idempotent)"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra", "renameFallbackOutput": "Échec — alerte RH" }
+      },
+      "id": "1f2b1a10-0003-4a11-8a11-000000000003",
+      "name": "Brancher sur la réponse",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [340, 260]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "note",
+              "type": "string",
+              "value": "Point d'accroche T-24/T-25 : le parcours enregistre déjà, dans audit_events, qui doit être notifié (journey.owner_notification_pending), l'envoi différé de l'email de bienvenue (journey.welcome_email_pending) et la création des événements d'agenda (journey.calendar_events_pending). Aucun envoi réel n'a lieu tant que ces tickets ne livrent pas Resend et l'intégration calendrier — ce nœud est un espace réservé documenté, pas une notification simulée."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1f2b1a10-0004-4a11-8a11-000000000004",
+      "name": "Notifier les responsables (à câbler en T-24/T-25)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [600, 140]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "note",
+              "type": "string",
+              "value": "Référence déjà reçue : idempotence vérifiée par la contrainte unique journeys(company_id, hire_reference). Rien à créer, rien à notifier une seconde fois."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1f2b1a10-0005-4a11-8a11-000000000005",
+      "name": "Ignorer (doublon)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [600, 260]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "alerte",
+              "type": "string",
+              "value": "=Échec explicite de W1 pour la référence {{ $('Webhook — Embauche validée').item.json.body.hireReference }} : {{ $json.body?.error ?? 'réponse inattendue' }} (statut {{ $json.statusCode }}). Aucun parcours vide n'a été créé — voir no_match / ambiguous_match dans create-journey-from-validated-hire.ts."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1f2b1a10-0006-4a11-8a11-000000000006",
+      "name": "Alerter la RH — Échec explicite",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [600, 400],
+      "notes": "Espace réservé : à câbler sur l'envoi Resend de T-24 pour prévenir la RH qu'aucun parcours n'a été généré (no_match, ambiguous_match, ou date d'arrivée invalide)."
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "1f2b1a10-0007-4a11-8a11-000000000007",
+      "name": "Répondre au webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [860, 260]
+    }
+  ],
+  "connections": {
+    "Webhook — Embauche validée": {
+      "main": [[{ "node": "Appeler l'application — Créer le parcours", "type": "main", "index": 0 }]]
+    },
+    "Appeler l'application — Créer le parcours": {
+      "main": [[{ "node": "Brancher sur la réponse", "type": "main", "index": 0 }]]
+    },
+    "Brancher sur la réponse": {
+      "main": [
+        [{ "node": "Notifier les responsables (à câbler en T-24/T-25)", "type": "main", "index": 0 }],
+        [{ "node": "Ignorer (doublon)", "type": "main", "index": 0 }],
+        [{ "node": "Alerter la RH — Échec explicite", "type": "main", "index": 0 }]
+      ]
+    },
+    "Notifier les responsables (à câbler en T-24/T-25)": {
+      "main": [[{ "node": "Répondre au webhook", "type": "main", "index": 0 }]]
+    },
+    "Ignorer (doublon)": {
+      "main": [[{ "node": "Répondre au webhook", "type": "main", "index": 0 }]]
+    },
+    "Alerter la RH — Échec explicite": {
+      "main": [[{ "node": "Répondre au webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "onboardingrh-w1-validated-hire-export"
+  }
+}

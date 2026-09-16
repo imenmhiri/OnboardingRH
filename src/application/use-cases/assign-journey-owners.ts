@@ -50,7 +50,7 @@ export async function assignJourneyOwners(
     readonly companyId: string;
     readonly journeyId: string;
     readonly tasks: readonly Task[];
-    readonly actorId: string;
+    readonly actorId: string | null;
   },
 ): Promise<AssignJourneyOwnersResult> {
   const context = await ports.directory.contextFor(input.journeyId);

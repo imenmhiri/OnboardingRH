@@ -5,7 +5,8 @@
  */
 export interface AuditEvent {
   readonly companyId: string;
-  readonly actorId: string;
+  /** Null for a system actor — a webhook has no human behind it (see W1, T-21). */
+  readonly actorId: string | null;
   readonly action: string;
   readonly journeyId?: string;
   readonly taskId?: string;
