@@ -42,7 +42,7 @@ describe('landingArea', () => {
   it('envoie chacun la ou il a quelque chose a faire', () => {
     expect(landingArea('hr_admin')).toBe('cockpit');
     expect(landingArea('manager')).toBe('cockpit');
-    expect(landingArea('it')).toBe('portal');
+    expect(landingArea('it')).toBe('equipment');
     expect(landingArea('employee')).toBe('portal');
   });
 });

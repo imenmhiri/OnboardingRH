@@ -385,6 +385,21 @@ values
   ('f3000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', null, 'f2000000-0000-4000-8000-000000000001', 'requested'),
   ('f3000000-0000-4000-8000-000000000007', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', null, 'f2000000-0000-4000-8000-000000000002', 'requested');
 
+-- Un casque remis à Alice (parcours en cours, compte actif) mais jamais
+-- accusé : le cas de démonstration « accusé de réception en attente » que
+-- T-19 doit pouvoir faire accuser depuis un vrai portail employé. Diego,
+-- seul autre cas « handed_over » du jeu de données, n'a pas de compte — Alice
+-- est donc la seule à pouvoir jouer ce parcours de bout en bout.
+insert into public.equipment_requests (id, company_id, journey_id, task_id, catalog_item_id, status)
+values (
+  'f3000000-0000-4000-8000-000000000008',
+  '11111111-1111-4111-8111-111111111111',
+  'a0000000-0000-4000-8000-000000000002',
+  null,
+  'f2000000-0000-4000-8000-000000000003',
+  'handed_over'
+);
+
 -- Trace du cas limite « attribué puis repris » : sans historique dédié, c'est
 -- le journal d'audit (déjà en place depuis T-06) qui porte la raison.
 insert into public.audit_events (company_id, journey_id, action, payload)

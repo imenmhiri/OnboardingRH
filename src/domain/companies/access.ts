@@ -31,9 +31,15 @@ export function canAccess(role: Role, area: Area): boolean {
   return AREA_ROLES[area].includes(role);
 }
 
-/** L'espace ou envoyer quelqu'un qui arrive sans destination precise. */
+/**
+ * L'espace ou envoyer quelqu'un qui arrive sans destination precise. L'IT n'a
+ * pas de cockpit mais a sa propre file de travail : la renvoyer vers le
+ * portail (pense pour un nouvel arrivant) la laisserait sans rien a faire.
+ */
 export function landingArea(role: Role): Area {
-  return canAccess(role, 'cockpit') ? 'cockpit' : 'portal';
+  if (canAccess(role, 'cockpit')) return 'cockpit';
+  if (canAccess(role, 'equipment')) return 'equipment';
+  return 'portal';
 }
 
 export type ActiveCompanyResolution =

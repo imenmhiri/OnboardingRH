@@ -4,9 +4,11 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { uploadTaskDocument } from '@/application/use-cases/upload-task-document';
 import { requestDocumentLink } from '@/application/use-cases/request-document-link';
+import { transitionEquipmentRequest } from '@/application/use-cases/transition-equipment-request';
 import { supabaseTaskDocumentRepository } from '@/infrastructure/supabase/task-documents';
 import { supabaseStorage } from '@/infrastructure/supabase/storage';
 import { supabaseAuditTrail } from '@/infrastructure/supabase/audit-trail';
+import { supabaseEquipmentRepository } from '@/infrastructure/supabase/equipment-requests';
 import { createSupabaseServerClient } from '@/infrastructure/supabase/server-client';
 import { currentSession } from '@/lib/session';
 
@@ -106,4 +108,36 @@ export async function openDocumentLink(documentId: string): Promise<DocumentLink
     return { url: null, error: 'Ce lien n’est plus disponible. Réessayez.' };
   }
   return { url: result.signedUrl.url, error: null };
+}
+
+export interface AcknowledgeEquipmentState {
+  readonly ok: boolean;
+  readonly error: string | null;
+}
+
+/**
+ * Le seul geste que l'employe fait lui-meme sur son materiel : confirmer
+ * l'avoir recu. La RLS ne laisse cette ecriture aboutir que vers
+ * "acknowledged" (migration T-15) ; le domaine verifie en plus que la demande
+ * est bien au statut "handed_over" avant d'accepter — deux gardes
+ * independantes, pas redondantes.
+ */
+export async function acknowledgeEquipment(requestId: string): Promise<AcknowledgeEquipmentState> {
+  const session = await currentSession();
+  if (!session.ok) {
+    redirect('/connexion');
+  }
+
+  const client = await createSupabaseServerClient();
+  const result = await transitionEquipmentRequest(
+    { repository: supabaseEquipmentRepository(client), audit: supabaseAuditTrail(client) },
+    { requestId, to: 'acknowledged', actorId: session.context.user.id },
+  );
+
+  if (!result.ok) {
+    return { ok: false, error: 'Cet accusé de réception n’a pas pu être enregistré. Réessayez.' };
+  }
+
+  revalidatePath('/portail');
+  return { ok: true, error: null };
 }
