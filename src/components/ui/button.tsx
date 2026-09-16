@@ -40,6 +40,19 @@ export function Button({
   ...props
 }: ButtonProps) {
   const Component = asChild ? Slot : 'button';
+  // Slot (Radix) demande exactement un enfant React valide pour pouvoir y
+  // fusionner ses props : lui passer le repli `null` du spinner à côté de
+  // l'enfant réel le fait échouer. En délégation (`asChild`), on transmet
+  // donc `children` tel quel ; la combinaison chargement + délégation n'a
+  // pas de sens ici — un lien ne se met pas en `aria-busy`.
+  const content = asChild ? (
+    children
+  ) : (
+    <>
+      {loading ? <Loader2 aria-hidden className="size-4 animate-spin" /> : null}
+      {children}
+    </>
+  );
 
   return (
     <Component
@@ -57,8 +70,7 @@ export function Button({
       disabled={disabled ?? loading}
       {...props}
     >
-      {loading ? <Loader2 aria-hidden className="size-4 animate-spin" /> : null}
-      {children}
+      {content}
     </Component>
   );
 }
