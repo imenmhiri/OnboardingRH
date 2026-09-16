@@ -23,7 +23,8 @@ export async function loadTemplateForEditing(
   return repository.findById(templateId);
 }
 
-function toJourneyTemplate(detail: TemplateDetail): JourneyTemplate {
+/** Reutilise par W1 (T-21) : instancier un vrai parcours part du meme detail. */
+export function toJourneyTemplate(detail: TemplateDetail): JourneyTemplate {
   return {
     id: detail.id,
     companyId: detail.companyId,

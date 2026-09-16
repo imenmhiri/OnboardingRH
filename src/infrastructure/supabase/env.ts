@@ -16,3 +16,7 @@ export function supabaseUrl(): string {
 export function supabaseAnonKey(): string {
   return required('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 }
+
+export function supabaseServiceRoleKey(): string {
+  return required('SUPABASE_SERVICE_ROLE_KEY');
+}

@@ -114,10 +114,59 @@ Comptes de démonstration (mot de passe commun `OnboardingDemo!2026`) :
 Le dernier compte démontre la bascule de société : même personne, rôle et marque différents selon la
 société active.
 
+## Automatisations (n8n)
+
+### W1 — Embauche validée (T-21)
+
+**Déclencheur** — un webhook n8n authentifié reçoit l'identifiant de l'embauche validée (société,
+site, métier, type de contrat, nom, manager, date d'arrivée, référence externe ATS/HRIS). Aucune
+donnée personnelle au-delà du nom, déjà porté par `journeys.employee_name` partout ailleurs dans
+l'application.
+
+**Ce qu'il appelle** — `POST /api/hires/validated`
+([src/app/api/hires/validated/route.ts](src/app/api/hires/validated/route.ts)), une route fine qui
+délègue tout au cas d'usage
+[`createJourneyFromValidatedHire`](src/application/use-cases/create-journey-from-validated-hire.ts) :
+sélection du template (`selectTemplate`, T-09), instanciation des tâches et calcul des échéances
+(`instantiateJourney`, T-11), résolution des responsables (`assignJourneyOwners`, T-12). Le workflow
+n8n ne recalcule rien — il appelle, branche sur la réponse, notifie.
+
+**Authentification** — en-tête `x-webhook-secret` comparé en temps constant
+(`crypto.timingSafeEqual`) à `N8N_WEBHOOK_SECRET` ; absent ou invalide → `401` avant tout accès à la
+base.
+
+**Idempotence** — chaque embauche porte une `hireReference` externe, contrainte unique en base
+(`journeys(company_id, hire_reference)`, migration
+`20260916110000_journeys_hire_reference.sql`). Une même référence reçue deux fois renvoie le parcours
+déjà créé (`200`, `status: "duplicate"`) au lieu d'en produire un second.
+
+**Échecs explicites** — aucun template correspondant (`no_match`) ou plusieurs à égalité
+(`ambiguous_match`) renvoient un `422` avec la raison, jamais un parcours vide. Le workflow branche ce
+cas vers une alerte RH.
+
+**Ce qu'il envoie, et ce qu'il n'envoie pas encore** — la création du parcours écrit dans
+`audit_events` l'intention de notifier chaque responsable assigné
+(`journey.owner_notification_pending`), l'envoi différé de l'email de bienvenue calé sur la date
+d'arrivée (`journey.welcome_email_pending`) et la création des événements d'agenda
+(`journey.calendar_events_pending`). **Aucun email ni événement d'agenda réel n'est envoyé par W1** :
+Resend (T-24) et l'intégration calendrier (T-25) ne sont pas encore construits. C'est un point
+d'accroche documenté, pas un envoi simulé — brancher T-24/T-25 sur ces événements d'audit suffira.
+
+**Variables d'environnement** — `SUPABASE_SERVICE_ROLE_KEY` (la route agit sans session utilisateur,
+donc sans RLS ; l'autorisation vient du secret webhook), `N8N_WEBHOOK_SECRET`, `N8N_WEBHOOK_URL`
+(déclenché côté n8n, documenté pour mémoire).
+
+**Export** — [workflows/w1-validated-hire.json](workflows/w1-validated-hire.json). Aucune instance
+n8n n'a pu tourner dans cet environnement (sandbox sans accès réseau vérifié pour `npx n8n`, voir
+[docs/tickets/T-21-w1-embauche-validee.md](docs/tickets/T-21-w1-embauche-validee.md)) : le JSON est
+écrit à la main selon le schéma documenté par n8n, et la partie réelle est vérifiée en appelant
+directement la route (`Invoke-RestMethod`), preuve détaillée dans le ticket de clôture.
+
 ## Limites connues
 
-- Resend, l'intégration agenda et les workflows n8n ne sont pas encore branchés — les répertoires
-  correspondants sont créés mais vides. Supabase, lui, est branché sur les quatre écrans.
+- Resend et l'intégration agenda ne sont pas encore branchés : W1 enregistre l'intention dans le
+  journal d'audit (voir ci-dessus) sans envoyer quoi que ce soit. W2 (retard critique) et W3 (bilan
+  J+30) restent à construire.
 - Pas encore de déploiement public.
 
 ## Écarts d'accessibilité et de cohérence assumés (T-20)
