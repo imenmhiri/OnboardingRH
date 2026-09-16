@@ -2,8 +2,9 @@ import type { CompanyBranding } from '@/lib/branding';
 import { renderEmail, type RenderedEmail } from './layout';
 
 /**
- * Construit et teste des a present ; pas encore appele par un declencheur
- * reel (attend W3 — bilan J+7/J+30, T-23).
+ * Appele par W3 — bilan J+30 (T-23), `run-day-30-review-scan.ts`. `surveyUrl`
+ * porte un jeton signe et limite dans le temps
+ * (`application/security/survey-access-token.ts`), jamais un identifiant nu.
  */
 export interface QuestionnaireEmailInput {
   readonly employeeName: string;

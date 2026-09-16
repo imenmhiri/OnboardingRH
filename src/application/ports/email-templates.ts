@@ -45,8 +45,17 @@ export interface EscalationEmailTemplateInput {
   readonly branding: CompanyBranding;
 }
 
+export interface QuestionnaireEmailTemplateInput {
+  readonly employeeName: string;
+  /** "J+7" ou "J+30". */
+  readonly milestoneLabel: string;
+  readonly surveyUrl: string;
+  readonly branding: CompanyBranding;
+}
+
 export interface EmailTemplates {
   renderWelcome(input: WelcomeEmailTemplateInput): RenderedEmail;
   renderReminder(input: ReminderEmailTemplateInput): RenderedEmail;
   renderEscalation(input: EscalationEmailTemplateInput): RenderedEmail;
+  renderQuestionnaire(input: QuestionnaireEmailTemplateInput): RenderedEmail;
 }

@@ -213,6 +213,37 @@ honnête que W1 : écrit à la main faute d'instance n8n réelle dans cet enviro
 appelant directement `/api/escalation/run` contre une base fraîchement réinitialisée — voir
 [docs/tickets/T-22-w2-retard-critique.md](docs/tickets/T-22-w2-retard-critique.md).
 
+### W3 — Bilan J+30 (T-23)
+
+**Déclencheur** — un déclencheur planifié n8n, une fois par jour ouvré (cron `0 8 * * 1-5`, après W2).
+
+**Ce qu'il appelle** — `POST /api/surveys/run`
+([src/app/api/surveys/run/route.ts](src/app/api/surveys/run/route.ts)), qui délègue au cas d'usage
+[`runDay30ReviewScan`](src/application/use-cases/run-day-30-review-scan.ts) : pour chaque parcours
+actif, recale les jalons `day_7`/`day_30` avec `planSurveys` (T-14, jamais réécrit — un parcours
+reporté recale une ligne encore `scheduled`, jamais une déjà `sent`/`answered`), envoie les
+questionnaires échus (`resolveSurveyChannel` : adresse professionnelle, puis personnelle, puis lien
+portail — jamais d'abandon silencieux), relance une fois à J+3 jours ouvrés sans réponse, puis clôt
+(`completed`) le parcours dont le J+30 a atteint un état terminal (répondu, annulé pour fin de contrat,
+ou relancé depuis 5 jours ouvrés sans réponse). Corps attendu : `{ companyId?: string, dryRun?: boolean }`.
+
+**Authentification** — même secret partagé que W1/W2/T-24.
+
+**Lien signé et limité dans le temps** — le lien du questionnaire porte un jeton HMAC-SHA256
+(`SURVEY_LINK_SECRET`, TTL 30 jours), généré à partir de la date du jour de la société (jamais une
+horloge lue directement — voir [src/application/security/survey-access-token.ts](src/application/security/survey-access-token.ts)),
+vérifiable côté serveur sans état, et rejeté s'il est expiré ou altéré.
+
+**Variables d'environnement** — celles de W1/W2/T-24, plus `SURVEY_LINK_SECRET`.
+
+**Export** — [workflows/w3-day-30-review.json](workflows/w3-day-30-review.json), même limite honnête
+que W1/W2 (écrit à la main), vérifié en appelant directement `/api/surveys/run` contre une base
+fraîchement réinitialisée — voir
+[docs/tickets/T-23-w3-revue-j30.md](docs/tickets/T-23-w3-revue-j30.md). **Dette produit non couverte
+par ce ticket** : aucune page employé ne consomme encore ce lien signé (le questionnaire n'a pas
+d'écran de réponse dans `src/app/` à ce jour) — le mécanisme du lien est réel et testé, sa destination
+ne l'est pas encore.
+
 ### Emails transactionnels — Resend (T-24)
 
 Port `Mailer` ([src/application/ports/mailer.ts](src/application/ports/mailer.ts)) et implémentation
@@ -221,9 +252,9 @@ les cas d'usage ne connaissent que l'interface, ce qui rend l'envoi testable san
 Cinq gabarits français dans `src/infrastructure/resend/templates/` (bienvenue, tâche assignée,
 relance, escalade, questionnaire), tous construits et testés HTML + texte brut, personnalisés par la
 marque de la société (logo si présent, sinon le nom en texte — les deux sociétés de démonstration
-n'ont pas de logo). Seul le gabarit de bienvenue est branché à un déclencheur réel aujourd'hui (voir
-W1 ci-dessus) ; les quatre autres attendent leur déclencheur (T-22, T-23, flux d'attribution des
-tâches).
+n'ont pas de logo). Bienvenue (W1), relance et escalade (W2) et questionnaire (W3) sont désormais branchés à un
+déclencheur réel ; seul le gabarit de tâche assignée attend encore le sien (flux d'attribution des
+tâches, hors périmètre de T-23).
 
 Aucune pièce jointe, aucun lien signé à durée illimitée : les emails pointent vers le portail
 (authentification Supabase déjà en place) plutôt que de contourner la connexion. Un employé sans
@@ -239,9 +270,11 @@ Détail complet, preuves d'exécution réelle et dette restante :
 - Aucune livraison Resend réelle n'a été vérifiée (pas de clé d'API réelle disponible dans cet
   environnement) : le chemin d'envoi est vérifié de bout en bout jusqu'à l'appel réseau réel à
   Resend, qui répond une erreur d'authentification (clé factice) — voir T-24.
-- Tâche assignée et questionnaire : gabarits prêts et testés, pas encore branchés à un déclencheur
-  réel (flux d'attribution des tâches, T-23). Relance et escalade sont désormais branchées par W2.
-  W3 (bilan J+30) reste à construire.
+- Tâche assignée : gabarit prêt et testé, pas encore branché à un déclencheur réel (flux
+  d'attribution des tâches, hors périmètre actuel). W1, W2 et W3 sont désormais tous branchés.
+- **Aucune page employé ne consomme encore le lien signé du questionnaire** (W3, T-23) : le jeton est
+  réel, signé et limité dans le temps, mais sa destination (écran de réponse) n'existe pas encore
+  dans `src/app/` — un vrai gap produit à couvrir par un futur ticket.
 - Pas encore de déploiement public.
 
 ## Écarts d'accessibilité et de cohérence assumés (T-20)

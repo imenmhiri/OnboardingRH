@@ -75,6 +75,9 @@ export function fakeJourneyRepository(overrides: Partial<JourneyRepository> = {}
     async assignOwner(taskId: string, ownerId: string | null) {
       owners.set(taskId, ownerId);
     },
+    async updateJourneyStatus() {
+      // Non utilise par ces tests (W1) ; W3 (T-23) a son propre jeu de fixtures.
+    },
     ...overrides,
   };
 

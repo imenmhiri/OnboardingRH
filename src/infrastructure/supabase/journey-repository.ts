@@ -84,5 +84,12 @@ export function supabaseJourneyRepository(client: SupabaseClient): JourneyReposi
         throw new Error(`Attribution du responsable impossible pour ${taskId} : ${error.message}`);
       }
     },
+
+    async updateJourneyStatus(journeyId: string, status: 'completed' | 'cancelled'): Promise<void> {
+      const { error } = await client.from('journeys').update({ status }).eq('id', journeyId);
+      if (error) {
+        throw new Error(`Changement de statut impossible pour ${journeyId} : ${error.message}`);
+      }
+    },
   };
 }
