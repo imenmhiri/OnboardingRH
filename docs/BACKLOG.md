@@ -56,7 +56,7 @@ de terminé commune sont dans [WORKFLOW.md](WORKFLOW.md).
 | T-23 | [W3 revue J+30](tickets/T-23-w3-revue-j30.md) | workflows | automation-builder | T-14, T-24 | fait |
 | T-24 | [Emails transactionnels](tickets/T-24-emails-resend.md) | infra/resend | automation-builder | T-07, T-12 | fait |
 | T-25 | [Agenda première semaine](tickets/T-25-agenda-premiere-semaine.md) | infra/calendar | automation-builder | T-11, T-17 | fait |
-| T-26 | [Synthèse IA anonymisée](tickets/T-26-synthese-ia-anonymisee.md) | application | automation-builder | T-14 | à faire |
+| T-26 | [Synthèse IA anonymisée](tickets/T-26-synthese-ia-anonymisee.md) | application | automation-builder | T-14 | fait |
 
 ## Livraison
 

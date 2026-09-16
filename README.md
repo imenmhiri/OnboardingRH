@@ -294,8 +294,44 @@ un cas particulier codé en dur. Titre et description restent le texte déjà g�
 compte agenda d'entreprise ne bloque pas l'évènement : il se crée sans participant nommé plutôt que
 d'échouer pour toute l'équipe.
 
+### Synthèse IA anonymisée de la satisfaction (T-26)
+
+Anonymisation déterministe, pure, testée exhaustivement sans mock —
+[src/domain/privacy/anonymize-comment.ts](src/domain/privacy/anonymize-comment.ts) : redige tout
+nom connu (roster fourni par l'application, jamais lu par le domaine), toute adresse email (motif
+générique, connue ou non), tout nom de site/société, et — garde-fou pour un nom propre absent du
+roster — toute séquence d'au moins deux mots à majuscule initiale consécutifs. Les limites connues de
+cette dernière heuristique (faux positifs sur des expressions à deux mots capitalisés, faux négatifs
+sur un nom isolé d'un seul mot hors roster) sont documentées en tête du fichier et dans
+[docs/tickets/T-26-synthese-ia-anonymisee.md](docs/tickets/T-26-synthese-ia-anonymisee.md).
+
+Port `SatisfactionSummarizer` ([src/application/ports/satisfaction-summarizer.ts](src/application/ports/satisfaction-summarizer.ts))
+et implémentation Anthropic Messages API
+([src/infrastructure/anthropic/satisfaction-summarizer.ts](src/infrastructure/anthropic/satisfaction-summarizer.ts)),
+même discipline que `Mailer`/`Calendar` : client HTTP injecté, résultat typé succès/échec, jamais
+d'exception à deviner. Le cas d'usage
+[`generateSatisfactionSummaries`](src/application/use-cases/generate-satisfaction-summaries.ts)
+applique le seuil `survey_settings.minimum_respondents` (même colonne que l'agrégation T-14, aucun
+second seuil inventé) **avant** tout appel IA — en dessous, aucune tentative n'a lieu — puis anonymise
+chaque commentaire et n'envoie jamais de texte brut au modèle.
+
+Le résultat est mis en cache dans `ai_satisfaction_summaries` (RLS RH uniquement) par une route dédiée
+`POST /api/satisfaction/summarize`, déclenchée par n8n sur son propre planning (alignée sur le passage
+J+30 qui fait accumuler de nouvelles réponses) — jamais par la lecture du cockpit, qui reste rapide et
+utilisable même si le fournisseur IA est en panne ou mal configuré. Le cockpit affiche la synthèse avec
+une mention explicite « Synthèse générée automatiquement » et le nombre de répondants, jamais comme un
+fait individuel, avec le même repli « pas assez de réponses » que la moyenne par site déjà en place.
+
+Variable d'environnement : `ANTHROPIC_API_KEY` (voir `.env.example`) ; absente, la synthèse dégrade
+proprement plutôt que de faire échouer autre chose. Détail complet, preuves de vérification réelle
+(payload exact envoyé au modèle, verbatim de test avec nom hors roster) et dette restante :
+[docs/tickets/T-26-synthese-ia-anonymisee.md](docs/tickets/T-26-synthese-ia-anonymisee.md).
+
 ## Limites connues
 
+- **Aucune clé Anthropic réelle disponible dans cet environnement** (T-26) : le chemin de génération
+  est vérifié jusqu'à l'appel réseau réel à `api.anthropic.com`, qui répond une erreur d'authentification
+  (clé factice) — même limite honnête que Resend, Google Calendar et n8n.
 - Aucune livraison Resend réelle n'a été vérifiée (pas de clé d'API réelle disponible dans cet
   environnement) : le chemin d'envoi est vérifié de bout en bout jusqu'à l'appel réseau réel à
   Resend, qui répond une erreur d'authentification (clé factice) — voir T-24.

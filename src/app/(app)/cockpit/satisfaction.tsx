@@ -1,7 +1,7 @@
 import { Card, CardBody, CardHeader } from '@/components/ui/card';
 import { EmptyState, ErrorState } from '@/components/ui/states';
 import { StatusBadge } from '@/components/ui/status';
-import { aggregateByGroup } from '@/domain/surveys/aggregation';
+import { aggregateByGroup, aggregateRatings } from '@/domain/surveys/aggregation';
 import {
   detectJourneySignals,
   detectRecurringThemes,
@@ -29,6 +29,12 @@ interface SettingsRow {
   drop_at_least: number;
   recurring_theme_at_least: number;
   minimum_respondents: number;
+}
+interface AiSummaryRow {
+  group_key: string;
+  summary_text: string;
+  generated_at: string;
+  based_on_respondent_count: number;
 }
 
 const MILESTONE_LABEL: Record<SurveyMilestone, string> = { day_7: 'J+7', day_30: 'J+30' };
@@ -83,14 +89,23 @@ export async function SatisfactionCard({
 
   const client = await createSupabaseServerClient();
 
-  const [{ data: settingsRow }, { data: surveyRows, error: surveysError }] = await Promise.all([
+  const [{ data: settingsRow }, { data: surveyRows, error: surveysError }, { data: aiSummaryRows }] = await Promise.all([
     client
       .from('survey_settings')
       .select('low_rating_at_or_below, drop_at_least, recurring_theme_at_least, minimum_respondents')
       .eq('company_id', companyId)
       .maybeSingle(),
     client.from('surveys').select('id, journey_id, milestone').in('journey_id', journeyIds).eq('status', 'answered'),
+    // Lecture seule du cache : une synthese IA absente ou une erreur ne doit
+    // jamais empecher le reste du cockpit de s'afficher (DoD T-26, "service
+    // indisponible : le cockpit reste utilisable sans la synthese").
+    client
+      .from('ai_satisfaction_summaries')
+      .select('group_key, summary_text, generated_at, based_on_respondent_count')
+      .eq('company_id', companyId),
   ]);
+
+  const aiSummaryByGroup = new Map(((aiSummaryRows ?? []) as AiSummaryRow[]).map((row) => [row.group_key, row]));
 
   if (surveysError) {
     return (
@@ -176,6 +191,10 @@ export async function SatisfactionCard({
 
   const siteIds = [...new Set(journeys.map((journey) => journey.site_id ?? 'none'))];
   const aggregates = aggregateByGroup(groupedRatings, siteIds, minimumRespondents);
+  const companyWideAggregate = aggregateRatings(
+    groupedRatings.map((entry) => entry.rating),
+    minimumRespondents,
+  );
   // detectRecurringThemes ne produit que des signaux « recurring_theme » ; le
   // filtre-prédicat rend ce fait visible au typage plutôt que de le supposer.
   const recurringThemes = detectRecurringThemes(allResponses, policy).filter(
@@ -251,6 +270,50 @@ export async function SatisfactionCard({
             </ul>
           </div>
         ) : null}
+
+        <div>
+          <h3 className="mb-2 text-sm font-medium text-text">Synthèse IA des verbatims</h3>
+          <ul className="space-y-2">
+            {[
+              { key: 'company', label: 'Toute la société', aggregate: companyWideAggregate },
+              ...siteIds
+                .filter((siteId) => siteId !== 'none')
+                .map((siteId) => ({
+                  key: siteId,
+                  label: siteNameById.get(siteId) ?? 'Site inconnu',
+                  aggregate: aggregates.get(siteId),
+                })),
+            ].map(({ key, label, aggregate }) => {
+              const cached = aiSummaryByGroup.get(key);
+              return (
+                <li key={key} className="rounded-[var(--radius)] border border-border px-3 py-2">
+                  <p className="mb-1 text-sm font-medium text-text">{label}</p>
+                  {aggregate?.kind !== 'available' ? (
+                    <p className="text-sm text-text-subtle">
+                      {aggregate?.kind === 'too_few'
+                        ? 'Trop peu de réponses pour produire une synthèse.'
+                        : 'Aucune réponse pour le moment.'}
+                    </p>
+                  ) : cached ? (
+                    <div>
+                      <div className="mb-1 flex items-center gap-2">
+                        <StatusBadge tone="progress" label="Synthèse générée automatiquement" />
+                        <span className="text-xs text-text-subtle">
+                          Basée sur {cached.based_on_respondent_count} réponses · agrégée, pas un fait individuel
+                        </span>
+                      </div>
+                      <p className="text-sm text-text-muted">{cached.summary_text}</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-text-subtle">
+                      Synthèse pas encore disponible pour ce groupe (génération à venir ou service indisponible).
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       </CardBody>
     </Card>
   );
