@@ -184,10 +184,15 @@ await ackKbPage.getByText('Réception confirmée').first().waitFor({ timeout: 80
 check('L’accusé de réception se déclenche au clavier, sans souris', true);
 
 // La confirmation change l'affichage sans navigation : une region vive doit
-// l'annoncer, pas seulement l'afficher visuellement.
+// l'annoncer, pas seulement l'afficher visuellement. Le portail peut porter
+// plusieurs regions vives independantes (depot de document, accuse de
+// materiel) : `querySelector` ne renverrait que la premiere du DOM, pas
+// forcement celle qui vient de parler — defaut de script trouve en verifiant
+// la cohabitation de ces regions pendant T-20, corrige en regardant si l'une
+// d'entre elles porte le message attendu.
 const liveRegionAnnounced = await ackKbPage.evaluate(() => {
-  const region = document.querySelector('[aria-live="polite"]');
-  return Boolean(region && region.textContent && region.textContent.includes('confirmée'));
+  const regions = [...document.querySelectorAll('[aria-live="polite"]')];
+  return regions.some((region) => region.textContent && region.textContent.includes('confirmée'));
 });
 check('La confirmation est annoncée via une région vive (aria-live)', liveRegionAnnounced);
 await ackKbCtx.close();

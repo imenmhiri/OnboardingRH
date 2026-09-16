@@ -43,10 +43,20 @@ const ERROR_MESSAGES: Record<string, string> = {
   transition_refusee: 'Cette action n’est plus possible dans l’état actuel de la demande. Rechargez la page.',
 };
 
+// Ces actions redirigent toutes vers la même URL : sans ce message, rien
+// n'indique explicitement qu'une transition a eu lieu — le badge change,
+// mais un lecteur d'écran ne suit pas un changement d'icône seul.
+const SUCCESS_MESSAGES: Record<string, string> = {
+  commande: 'Commande marquée : le matériel groupé passe à « Commandé ».',
+  remis: 'Matériel marqué comme remis ; en attente de l’accusé de réception par l’employé.',
+  repris: 'Attribution reprise ; la demande repasse à « Demandé ».',
+  demande: 'Nouvelle demande de matériel enregistrée.',
+};
+
 export default async function MaterielPage({
   searchParams,
 }: {
-  readonly searchParams: Promise<{ erreur?: string }>;
+  readonly searchParams: Promise<{ erreur?: string; succes?: string }>;
 }) {
   const session = await currentSession();
   if (!session.ok) {
@@ -57,7 +67,7 @@ export default async function MaterielPage({
   }
   const { companyId, companyName } = session.context.membership;
   const canViewCockpit = canAccess(session.context.membership.role, 'cockpit');
-  const { erreur } = await searchParams;
+  const { erreur, succes } = await searchParams;
 
   const client = await createSupabaseServerClient();
 
@@ -114,6 +124,16 @@ export default async function MaterielPage({
       {erreur && ERROR_MESSAGES[erreur] ? (
         <p role="alert" className="rounded-[var(--radius)] bg-danger-soft px-4 py-3 text-sm text-danger">
           {ERROR_MESSAGES[erreur]}
+        </p>
+      ) : null}
+
+      {succes && SUCCESS_MESSAGES[succes] ? (
+        <p
+          role="status"
+          aria-live="polite"
+          className="rounded-[var(--radius)] bg-success-soft px-4 py-3 text-sm text-success"
+        >
+          {SUCCESS_MESSAGES[succes]}
         </p>
       ) : null}
 

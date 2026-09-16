@@ -6,9 +6,10 @@ Plateforme d'intégration multi-sociétés : à partir d'une embauche validée, 
 adapté (société × métier × site), assigne les tâches à la RH, au manager, à l'IT et à l'employé,
 calcule les échéances en jours ouvrés, relance les retards et mesure la satisfaction à J+7 et J+30.
 
-> **État du projet** — socle technique en place (Next.js, TypeScript strict, Tailwind, Vitest,
-> découpage en couches). Le périmètre est découpé en 28 tickets dans
-> [docs/BACKLOG.md](docs/BACKLOG.md), traités un par un selon
+> **État du projet** — les quatre surfaces produit (créateur de parcours, portail employé, cockpit
+> RH, gestion du matériel) sont construites et reliées au vrai jeu de données, avec une passe
+> d'accessibilité et de cohérence transverse (T-20) une fois les quatre en place. Le périmètre est
+> découpé en tickets dans [docs/BACKLOG.md](docs/BACKLOG.md), traités un par un selon
 > [docs/WORKFLOW.md](docs/WORKFLOW.md).
 
 ## Installation
@@ -115,8 +116,36 @@ société active.
 
 ## Limites connues
 
-- Supabase, Resend, l'intégration agenda et les workflows n8n ne sont pas encore branchés — les
-  répertoires correspondants sont créés mais vides.
-- Le cockpit RH et le portail employé ne consomment pas encore ce jeu de données : ce sont des
-  coquilles en attente de T-17 et T-18. Les données sont prêtes, les écrans ne les lisent pas.
+- Resend, l'intégration agenda et les workflows n8n ne sont pas encore branchés — les répertoires
+  correspondants sont créés mais vides. Supabase, lui, est branché sur les quatre écrans.
 - Pas encore de déploiement public.
+
+## Écarts d'accessibilité et de cohérence assumés (T-20)
+
+La passe transverse T-20 a revu les quatre écrans ensemble (clavier, noms accessibles, contraste sur
+les deux palettes de démonstration, cohérence des composants et des formulations) et corrigé ce
+qu'elle a trouvé de réparable sans risque — voir
+[docs/tickets/T-20-passe-accessibilite.md](docs/tickets/T-20-passe-accessibilite.md) pour le détail
+écran par écran. Ce qui reste, consciemment laissé de côté plutôt que tu, comme l'exige la
+définition de terminé du ticket :
+
+- **Le retour (`returned`) et l'annulation (`cancelled`) d'une demande de matériel** sont des
+  transitions légales du domaine (`ALLOWED_TRANSITIONS`) mais n'ont aucune action dans l'écran
+  matériel — hérité de T-19, hors périmètre métier de T-20 (qui ne touche pas aux fonctionnalités).
+- **« Nouvelle demande » de matériel ne permet pas de choisir la tâche à lier** — même chose, hérité
+  de T-19, changement de formulaire plutôt que d'accessibilité.
+- **La réorganisation des tâches d'un template** suit l'ordre de création, sans glisser-déposer —
+  hérité de T-16 ; un glisser-déposer poserait de toute façon sa propre question d'accessibilité
+  (équivalent clavier) qu'il faudrait résoudre en même temps, pas en ajouter par-dessus l'existant.
+- **Les erreurs Supabase par section (cockpit, matériel)** restent vérifiées en lisant le code plutôt
+  qu'en simulant une panne réseau contre l'instance locale — hérité de T-18/T-19, aucun moyen simple
+  trouvé de déclencher ce chemin depuis un vrai navigateur sans perturber le reste des vérifications.
+- **La restitution de focus de Next.js après un `redirect()` de Server Action vers la même URL**
+  (matériel : commander, remettre, reprendre ; créateur de parcours : enregistrer, dupliquer,
+  supprimer) n'a pas été vérifiée indépendamment du reste de l'application — elle s'appuie sur le
+  gestionnaire de route intégré à l'App Router. Les changements qui ne naviguent réellement jamais
+  (attribution de matériel, dépôt de document, accusé de réception, et désormais les transitions de
+  matériel via le paramètre `succes` lu en `role="status"`) sont, eux, couverts par une région vive
+  explicite et vérifiés au clavier par les scripts de `scripts/ui-checks/`.
+- **Le moyen de contact du portail reste un nom seul**, sans email ni téléphone — hérité de T-17,
+  `profiles` ne porte pas ces champs aujourd'hui.
