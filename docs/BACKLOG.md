@@ -45,7 +45,7 @@ de terminé commune sont dans [WORKFLOW.md](WORKFLOW.md).
 | T-17 | [Portail employé](tickets/T-17-portail-employe.md) | app | ui-builder | T-03, T-05, T-06, T-07 | fait |
 | T-18 | [Cockpit RH](tickets/T-18-cockpit-rh.md) | app | ui-builder | T-03, T-06, T-10, T-12, T-14 | fait |
 | T-19 | [Gestion du matériel](tickets/T-19-gestion-materiel.md) | app | ui-builder | T-03, T-15 | fait |
-| T-20 | [Passe d'accessibilité](tickets/T-20-passe-accessibilite.md) | app | ui-builder | T-16 à T-19 | à faire |
+| T-20 | [Passe d'accessibilité](tickets/T-20-passe-accessibilite.md) | app | ui-builder | T-16 à T-19 | fait |
 
 ## Automatisations et IA
 
