@@ -171,6 +171,48 @@ n8n n'a pu tourner dans cet environnement (sandbox sans accès réseau vérifié
 directement les routes (`Invoke-WebRequest`), preuve détaillée dans les tickets de clôture T-21 et
 T-24.
 
+### W2 — Retard critique (T-22)
+
+**Déclencheur** — un déclencheur planifié n8n, une fois par jour ouvré (cron
+`0 7 * * 1-5`, lundi à vendredi 7h). Le jour férié d'une société précise n'est pas géré par le cron :
+l'application elle-même refuse le passage pour cette société ce jour-là (`skipped: true`,
+`skippedReason: "non_working_day"`).
+
+**Ce qu'il appelle** — `POST /api/escalation/run`
+([src/app/api/escalation/run/route.ts](src/app/api/escalation/run/route.ts)), qui délègue au cas
+d'usage [`runCriticalDelayScan`](src/application/use-cases/run-critical-delay-scan.ts) : charge la
+politique d'escalade de la société (`escalation_levels`, T-13), sélectionne les tâches en retard
+actionnables (`selectEscalationCandidates` — une tâche bloquée n'est jamais candidate, seule sa cause
+racine l'est), décide qui prévenir et à quel niveau (`decideEscalation`, garde anti-doublon incluse).
+`today` vient de l'horloge système au moment de l'appel (port `Clock`), jamais d'un champ du payload.
+Corps attendu : `{ companyId?: string, dryRun?: boolean }` — sans `companyId`, le passage tourne pour
+toutes les sociétés (c'est ce qu'appelle le déclencheur planifié unique).
+
+**Authentification** — même secret partagé que W1 et T-24 (`x-webhook-secret`, comparaison en temps
+constant), désormais factorisée dans
+[src/app/api/_shared/webhook-auth.ts](src/app/api/_shared/webhook-auth.ts).
+
+**Ce qu'il envoie** — le niveau `owner` envoie le gabarit de relance (`renderReminder`, T-24),
+adressé directement au propriétaire de la tâche ; les niveaux `manager` et `hr_admin` envoient le
+gabarit d'escalade (`renderEscalation`), adressé à la personne effectivement résolue par la politique
+(aucun gabarit distinct n'existe pour la RH : le texte ne nomme jamais le rôle, seulement les deux
+personnes). Chaque relance envoyée avec succès écrit `task.reminder_sent` dans `audit_events` (c'est
+cette trace, pas une table dédiée, qui porte la garde « pas de doublon le même jour ouvré » — T-13).
+Un échec d'envoi ou l'absence de canal joignable écrivent `email.delivery_failed` /
+`email.no_channel_available`, sans jamais marquer la relance comme faite.
+
+**Exécution à blanc** — `dryRun: true` calcule tout (qui, à quel niveau, pourquoi) sans rien envoyer
+ni rien tracer ; chaque décision positive rapporte la tâche, le destinataire et le retard en jours
+ouvrés.
+
+**Variables d'environnement** — les mêmes que W1/T-24 : `SUPABASE_SERVICE_ROLE_KEY`,
+`N8N_WEBHOOK_SECRET`, `RESEND_API_KEY`, `RESEND_FROM`, `NEXT_PUBLIC_APP_URL`, `ONBOARDING_APP_URL`.
+
+**Export** — [workflows/w2-critical-delay.json](workflows/w2-critical-delay.json). Même limite
+honnête que W1 : écrit à la main faute d'instance n8n réelle dans cet environnement, vérifié en
+appelant directement `/api/escalation/run` contre une base fraîchement réinitialisée — voir
+[docs/tickets/T-22-w2-retard-critique.md](docs/tickets/T-22-w2-retard-critique.md).
+
 ### Emails transactionnels — Resend (T-24)
 
 Port `Mailer` ([src/application/ports/mailer.ts](src/application/ports/mailer.ts)) et implémentation
@@ -197,8 +239,9 @@ Détail complet, preuves d'exécution réelle et dette restante :
 - Aucune livraison Resend réelle n'a été vérifiée (pas de clé d'API réelle disponible dans cet
   environnement) : le chemin d'envoi est vérifié de bout en bout jusqu'à l'appel réseau réel à
   Resend, qui répond une erreur d'authentification (clé factice) — voir T-24.
-- Tâche assignée, relance, escalade, questionnaire : gabarits prêts et testés, pas encore branchés à
-  un déclencheur réel. W2 (retard critique) et W3 (bilan J+30) restent à construire.
+- Tâche assignée et questionnaire : gabarits prêts et testés, pas encore branchés à un déclencheur
+  réel (flux d'attribution des tâches, T-23). Relance et escalade sont désormais branchées par W2.
+  W3 (bilan J+30) reste à construire.
 - Pas encore de déploiement public.
 
 ## Écarts d'accessibilité et de cohérence assumés (T-20)

@@ -42,6 +42,7 @@ function task(overrides: Partial<Task> & Pick<Task, 'id' | 'ownerRole'>): Task {
     dueDate: d('2026-04-07'),
     expectedDocument: null,
     sharedKey: null,
+    criticality: 'standard',
     ...overrides,
   };
 }

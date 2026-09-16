@@ -9,7 +9,6 @@ import type { JourneyTemplate, TaskDefinition } from '@/domain/templates/journey
  */
 export interface TemplateTaskRecord extends TaskDefinition {
   readonly id: string;
-  readonly criticality: 'standard' | 'critical';
   readonly position: number;
 }
 

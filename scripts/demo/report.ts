@@ -101,6 +101,7 @@ async function main(): Promise<void> {
         dueDate: parsePlainDate(t.due_on),
         expectedDocument: t.expected_document,
         sharedKey: t.shared_key,
+        criticality: t.criticality,
       }));
 
   console.log(`RAPPORT DE DÉMONSTRATION — T-10 à T-15\nDonnées réelles de la base locale, moteur réel du domaine. Aujourd'hui : ${today}`);
@@ -130,8 +131,8 @@ async function main(): Promise<void> {
   title('T-11 — Templates : sélectionner et instancier un parcours pour une nouvelle embauche');
   const templateRow = (await q<{ id: string; company_id: string; name: string; job_family: string | null; site_id: string | null; contract_type: string | null }>(
     'select id, company_id, name, job_family, site_id, contract_type from public.journey_templates where company_id = $1', [NORD]))[0]!;
-  const tt = await q<{ id: string; key: string; title: string; owner_role: OwnerRole; offset_working_days: number; expected_document: string | null; shared_key: string | null }>(
-    'select id, key, title, owner_role::text as owner_role, offset_working_days, expected_document, shared_key from public.template_tasks where template_id = $1 order by position', [templateRow.id]);
+  const tt = await q<{ id: string; key: string; title: string; owner_role: OwnerRole; offset_working_days: number; expected_document: string | null; shared_key: string | null; criticality: Criticality }>(
+    'select id, key, title, owner_role::text as owner_role, offset_working_days, expected_document, shared_key, criticality::text as criticality from public.template_tasks where template_id = $1 order by position', [templateRow.id]);
   const ttd = await q<{ template_task_id: string; depends_on_id: string }>('select template_task_id, depends_on_id from public.template_task_dependencies');
   const keyById = new Map(tt.map((t) => [t.id, t.key]));
   const definitions: TaskDefinition[] = tt.map((t) => ({
@@ -142,6 +143,7 @@ async function main(): Promise<void> {
     dependsOn: ttd.filter((d) => d.template_task_id === t.id).map((d) => keyById.get(d.depends_on_id)).filter((k): k is string => Boolean(k)),
     expectedDocument: t.expected_document,
     sharedKey: t.shared_key,
+    criticality: t.criticality,
   }));
   const template: JourneyTemplate = {
     id: templateRow.id,

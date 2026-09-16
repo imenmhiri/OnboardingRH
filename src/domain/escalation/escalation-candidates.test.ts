@@ -16,6 +16,7 @@ function task(overrides: Partial<EscalationSource['task']> & Pick<EscalationSour
     dueDate: d('2026-04-01'),
     expectedDocument: null,
     sharedKey: null,
+    criticality: 'standard' as const,
     ...overrides,
   };
 }

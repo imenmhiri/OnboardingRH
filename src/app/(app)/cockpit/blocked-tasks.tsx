@@ -109,6 +109,8 @@ export async function BlockedTasksCard({ journeys }: { readonly journeys: readon
     dueDate: parsePlainDate(row.due_on),
     expectedDocument: null,
     sharedKey: null,
+    // Criticite non requise pour le calcul de blocage ; non lue ici.
+    criticality: 'standard',
   }));
 
   const graphResult = buildTaskGraph(tasks);

@@ -1,5 +1,5 @@
-import { timingSafeEqual } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
+import { isAuthorizedWebhookRequest } from '@/app/api/_shared/webhook-auth';
 import { sendWelcomeEmail } from '@/application/use-cases/send-welcome-email';
 import { createSupabaseServiceClient } from '@/infrastructure/supabase/service-client';
 import { supabaseNotificationDirectory } from '@/infrastructure/supabase/notification-directory';
@@ -22,26 +22,12 @@ interface WelcomeEmailPayload {
   readonly journeyId?: unknown;
 }
 
-function isAuthorized(request: NextRequest): boolean {
-  const expected = process.env['N8N_WEBHOOK_SECRET'];
-  const provided = request.headers.get('x-webhook-secret');
-  if (!expected || !provided) {
-    return false;
-  }
-  const expectedBuffer = Buffer.from(expected);
-  const providedBuffer = Buffer.from(provided);
-  if (expectedBuffer.length !== providedBuffer.length) {
-    return false;
-  }
-  return timingSafeEqual(expectedBuffer, providedBuffer);
-}
-
 function requireString(value: unknown): string | null {
   return typeof value === 'string' && value.trim().length > 0 ? value : null;
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!isAuthorized(request)) {
+  if (!isAuthorizedWebhookRequest(request)) {
     return NextResponse.json({ error: 'Secret de webhook absent ou invalide.' }, { status: 401 });
   }
 

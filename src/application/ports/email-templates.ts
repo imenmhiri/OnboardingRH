@@ -25,6 +25,28 @@ export interface WelcomeEmailTemplateInput {
   readonly managerName: string | null;
 }
 
+export interface ReminderEmailTemplateInput {
+  readonly ownerName: string;
+  readonly taskTitle: string;
+  readonly dueDate: PlainDate;
+  readonly workingDaysLate: number;
+  readonly portalUrl: string;
+  readonly branding: CompanyBranding;
+}
+
+export interface EscalationEmailTemplateInput {
+  /** Le destinataire de l'escalade — un manager, ou une RH si le niveau l'exige. */
+  readonly managerName: string;
+  /** Le proprietaire de la tache en retard, jamais le destinataire ici. */
+  readonly ownerName: string;
+  readonly taskTitle: string;
+  readonly dueDate: PlainDate;
+  readonly portalUrl: string;
+  readonly branding: CompanyBranding;
+}
+
 export interface EmailTemplates {
   renderWelcome(input: WelcomeEmailTemplateInput): RenderedEmail;
+  renderReminder(input: ReminderEmailTemplateInput): RenderedEmail;
+  renderEscalation(input: EscalationEmailTemplateInput): RenderedEmail;
 }

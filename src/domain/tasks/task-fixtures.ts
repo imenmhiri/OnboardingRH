@@ -13,6 +13,7 @@ export function makeTask(overrides: Partial<Task> & Pick<Task, 'id'>): Task {
     dueDate: parsePlainDate('2026-03-02'),
     expectedDocument: null,
     sharedKey: null,
+    criticality: 'standard',
     ...overrides,
   };
 }
