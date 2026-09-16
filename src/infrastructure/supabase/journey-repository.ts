@@ -60,6 +60,7 @@ export function supabaseJourneyRepository(client: SupabaseClient): JourneyReposi
         status: task.status,
         expected_document: task.expectedDocument,
         shared_key: task.sharedKey,
+        criticality: task.criticality,
       }));
       const { error } = await client.from('tasks').insert(rows);
       if (error) {

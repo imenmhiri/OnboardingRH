@@ -1,0 +1,145 @@
+{
+  "name": "W2 — Retard critique",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "2c3d2b20-0001-4b22-9b22-000000000001",
+      "name": "Déclencheur planifié — un passage par jour ouvré",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-140, 260],
+      "notes": "7h du matin, du lundi au vendredi. Le cron ne connaît pas les jours fériés de chaque société : c'est l'application qui refuse le passage (skipped: true, skippedReason: 'non_working_day') pour une société dont c'est un jour férié — voir runCriticalDelayScan. Un jour non ouvré n'est donc jamais une décision n8n."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ONBOARDING_APP_URL }}/api/escalation/run",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ dryRun: false }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "2c3d2b20-0002-4b22-9b22-000000000002",
+      "name": "Appeler l'application — Relancer les retards critiques",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [100, 260],
+      "notes": "Aucun seuil, aucune date, aucune règle d'escalade ici : le corps ne transporte que dryRun. src/application/use-cases/run-critical-delay-scan.ts charge la politique d'escalade de chaque société (table escalation_levels, T-13), sélectionne les candidats, décide qui prévenir et à quel niveau, envoie (T-24) et trace (task.reminder_sent / email.delivery_failed). Sans companyId, la route boucle sur toutes les sociétés : un déclencheur planifié unique suffit."
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.statusCode }}",
+                    "rightValue": 200,
+                    "operator": { "type": "number", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Passage exécuté"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra", "renameFallbackOutput": "Échec — alerte RH" }
+      },
+      "id": "2c3d2b20-0003-4b22-9b22-000000000003",
+      "name": "Brancher sur la réponse",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [340, 260]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "note",
+              "type": "string",
+              "value": "=Passage terminé. Résultat par société renvoyé par l'application (skipped, notifications envoyées, refus motivés) : {{ JSON.stringify($json.body?.results ?? []) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2c3d2b20-0004-4b22-9b22-000000000004",
+      "name": "Consigner le résultat",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [600, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "alerte",
+              "type": "string",
+              "value": "=Échec du passage W2 (retard critique) : {{ $json.body?.error ?? 'réponse inattendue' }} (statut {{ $json.statusCode }}). Aucune relance n'a pu être calculée pour ce passage — à vérifier manuellement dans le cockpit avant le prochain passage planifié."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2c3d2b20-0005-4b22-9b22-000000000005",
+      "name": "Alerter la RH — Échec du passage",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [600, 340],
+      "notes": "Espace réservé : à câbler sur l'envoi Resend générique (hors gabarits de relance/escalade eux-mêmes, qui sont déjà envoyés par l'application) pour prévenir la RH d'une panne du passage planifié lui-même."
+    }
+  ],
+  "connections": {
+    "Déclencheur planifié — un passage par jour ouvré": {
+      "main": [[{ "node": "Appeler l'application — Relancer les retards critiques", "type": "main", "index": 0 }]]
+    },
+    "Appeler l'application — Relancer les retards critiques": {
+      "main": [[{ "node": "Brancher sur la réponse", "type": "main", "index": 0 }]]
+    },
+    "Brancher sur la réponse": {
+      "main": [
+        [{ "node": "Consigner le résultat", "type": "main", "index": 0 }],
+        [{ "node": "Alerter la RH — Échec du passage", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "onboardingrh-w2-critical-delay-export"
+  }
+}

@@ -13,6 +13,8 @@ export const OWNER_ROLES = ['hr_admin', 'manager', 'it', 'employee'] as const;
 
 export type OwnerRole = (typeof OWNER_ROLES)[number];
 
+export type Criticality = 'standard' | 'critical';
+
 export interface Task {
   readonly id: string;
   readonly journeyId: string;
@@ -30,6 +32,8 @@ export interface Task {
    * one badge order for three newcomers. Null when the task is specific.
    */
   readonly sharedKey: string | null;
+  /** Drives escalation thresholds (T-13) — required so it can never be silently forgotten. */
+  readonly criticality: Criticality;
 }
 
 const ALLOWED_TRANSITIONS: Readonly<Record<TaskStatus, readonly TaskStatus[]>> = {

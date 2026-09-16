@@ -99,5 +99,6 @@ function toTask(
     dueDate: computeDueDate(context.arrivalDate, definition.offsetInWorkingDays, context.calendar),
     expectedDocument: definition.expectedDocument,
     sharedKey: definition.sharedKey,
+    criticality: definition.criticality,
   };
 }

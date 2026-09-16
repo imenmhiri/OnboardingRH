@@ -52,7 +52,7 @@ de terminé commune sont dans [WORKFLOW.md](WORKFLOW.md).
 | # | Ticket | Couches | Agent | Dépend de | État |
 | --- | --- | --- | --- | --- | --- |
 | T-21 | [W1 embauche validée](tickets/T-21-w1-embauche-validee.md) | workflows | automation-builder | T-11, T-12 | fait |
-| T-22 | [W2 retard critique](tickets/T-22-w2-retard-critique.md) | workflows | automation-builder | T-13, T-24 | à faire |
+| T-22 | [W2 retard critique](tickets/T-22-w2-retard-critique.md) | workflows | automation-builder | T-13, T-24 | fait |
 | T-23 | [W3 revue J+30](tickets/T-23-w3-revue-j30.md) | workflows | automation-builder | T-14, T-24 | à faire |
 | T-24 | [Emails transactionnels](tickets/T-24-emails-resend.md) | infra/resend | automation-builder | T-07, T-12 | fait |
 | T-25 | [Agenda première semaine](tickets/T-25-agenda-premiere-semaine.md) | infra/calendar | automation-builder | T-11, T-17 | à faire |

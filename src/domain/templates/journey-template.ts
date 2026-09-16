@@ -1,4 +1,4 @@
-import type { OwnerRole } from '../tasks/task';
+import type { Criticality, OwnerRole } from '../tasks/task';
 
 /**
  * A journey template is a row, selected at runtime from the hire's company,
@@ -25,6 +25,8 @@ export interface TaskDefinition {
   readonly expectedDocument: string | null;
   /** Set when the same work serves several arrivals at once. */
   readonly sharedKey: string | null;
+  /** Carried to the instantiated task — drives escalation thresholds (T-13). */
+  readonly criticality: Criticality;
 }
 
 export interface JourneyTemplate {

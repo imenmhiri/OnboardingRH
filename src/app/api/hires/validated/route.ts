@@ -1,5 +1,5 @@
-import { timingSafeEqual } from 'node:crypto';
 import { NextResponse, type NextRequest } from 'next/server';
+import { isAuthorizedWebhookRequest } from '@/app/api/_shared/webhook-auth';
 import { createJourneyFromValidatedHire, type ValidatedHireInput } from '@/application/use-cases/create-journey-from-validated-hire';
 import { createSupabaseServiceClient } from '@/infrastructure/supabase/service-client';
 import { supabaseTemplateRepository } from '@/infrastructure/supabase/template-repository';
@@ -36,22 +36,6 @@ interface ValidatedHirePayload {
   readonly arrivalDate?: unknown;
   readonly hireReference?: unknown;
   readonly personalEmail?: unknown;
-}
-
-function isAuthorized(request: NextRequest): boolean {
-  const expected = process.env['N8N_WEBHOOK_SECRET'];
-  const provided = request.headers.get('x-webhook-secret');
-  if (!expected || !provided) {
-    return false;
-  }
-  const expectedBuffer = Buffer.from(expected);
-  const providedBuffer = Buffer.from(provided);
-  // Meme taille exigee avant timingSafeEqual : sinon il lance au lieu de
-  // renvoyer false, et une longueur differente resterait un indice temporel.
-  if (expectedBuffer.length !== providedBuffer.length) {
-    return false;
-  }
-  return timingSafeEqual(expectedBuffer, providedBuffer);
 }
 
 function requireString(value: unknown): string | null {
@@ -102,7 +86,7 @@ function parsePayload(body: ValidatedHirePayload): { input: ValidatedHireInput }
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!isAuthorized(request)) {
+  if (!isAuthorizedWebhookRequest(request)) {
     return NextResponse.json({ error: 'Secret de webhook absent ou invalide.' }, { status: 401 });
   }
 

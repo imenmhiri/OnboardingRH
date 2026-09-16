@@ -18,6 +18,7 @@ const definitions: readonly TaskDefinition[] = [
     dependsOn: [],
     expectedDocument: 'contrat-signe',
     sharedKey: null,
+    criticality: 'standard',
   },
   {
     key: 'it-account',
@@ -27,6 +28,7 @@ const definitions: readonly TaskDefinition[] = [
     dependsOn: ['contract'],
     expectedDocument: null,
     sharedKey: null,
+    criticality: 'critical',
   },
   {
     key: 'badge',
@@ -36,6 +38,7 @@ const definitions: readonly TaskDefinition[] = [
     dependsOn: ['contract'],
     expectedDocument: null,
     sharedKey: 'badge-batch-03',
+    criticality: 'standard',
   },
   {
     key: 'welcome',
@@ -45,6 +48,7 @@ const definitions: readonly TaskDefinition[] = [
     dependsOn: ['it-account', 'badge'],
     expectedDocument: 'accuse-reception',
     sharedKey: null,
+    criticality: 'standard',
   },
 ];
 
@@ -100,6 +104,14 @@ describe('instantiateJourney', () => {
     expect(tasks.find((task) => task.id === 'journey-42:contract')?.expectedDocument).toBe('contrat-signe');
     expect(tasks.find((task) => task.id === 'journey-42:it-account')?.expectedDocument).toBeNull();
     expect(tasks.find((task) => task.id === 'journey-42:badge')?.sharedKey).toBe('badge-batch-03');
+  });
+
+  it('reporte la criticite de la definition de template vers la tache instanciee', () => {
+    const result = instantiateJourney(baseInput);
+    const tasks = result.ok ? result.tasks : [];
+
+    expect(tasks.find((task) => task.id === 'journey-42:it-account')?.criticality).toBe('critical');
+    expect(tasks.find((task) => task.id === 'journey-42:contract')?.criticality).toBe('standard');
   });
 
   it('laisse le responsable a resoudre plus tard mais fixe le role', () => {
