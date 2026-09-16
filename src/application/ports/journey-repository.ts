@@ -48,4 +48,13 @@ export interface JourneyRepository {
 
   /** Null efface l'attribution : la tache redevient portee par l'equipe du role. */
   assignOwner(taskId: string, ownerId: string | null): Promise<void>;
+
+  /**
+   * Fait avancer le statut d'un parcours (`journey_status`). Utilise par W3
+   * (T-23) pour clore/archiver un parcours dont le bilan J+30 a atteint son
+   * etat terminal — jamais pour revenir en arriere, ce que ce port ne
+   * verifie pas lui-meme (au cas d'usage de ne demander que des transitions
+   * valides).
+   */
+  updateJourneyStatus(journeyId: string, status: 'completed' | 'cancelled'): Promise<void>;
 }
