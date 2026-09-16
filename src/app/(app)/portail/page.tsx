@@ -1,9 +1,11 @@
 import { redirect } from 'next/navigation';
+import { AcknowledgeEquipmentButton } from './acknowledge-equipment-button';
 import { DocumentLinkButton } from './document-link-button';
 import { DocumentUploadDialog } from './document-upload-dialog';
 import { Card, CardBody, CardHeader } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/states';
 import { StatusBadge } from '@/components/ui/status';
+import { isAwaitingAcknowledgement, type EquipmentStatus } from '@/domain/equipment/equipment';
 import { addCalendarDays, comparePlainDates, parsePlainDate } from '@/domain/scheduling/plain-date';
 import type { OwnerRole, TaskStatus } from '@/domain/tasks/task';
 import { supabaseTaskDocumentRepository } from '@/infrastructure/supabase/task-documents';
@@ -50,6 +52,13 @@ interface TaskRow {
   status: TaskStatus;
   due_on: string;
   expected_document: string | null;
+}
+
+interface EquipmentRequestRow {
+  id: string;
+  task_id: string | null;
+  catalog_item_id: string;
+  status: EquipmentStatus;
 }
 
 export default async function PortalPage() {
@@ -113,22 +122,27 @@ async function JourneyContent({
 }) {
   const client = await createSupabaseServerClient();
 
-  const [{ data: taskRows }, documents, { data: managerProfile }, { data: staffMembers }] = await Promise.all([
-    client
-      .from('tasks')
-      .select('id, title, owner_role, owner_id, status, due_on, expected_document')
-      .eq('journey_id', journeyId)
-      .order('due_on'),
-    supabaseTaskDocumentRepository(client).listByJourney(journeyId),
-    managerId
-      ? client.from('profiles').select('full_name').eq('id', managerId).maybeSingle()
-      : Promise.resolve({ data: null }),
-    client
-      .from('company_members')
-      .select('user_id, role')
-      .eq('company_id', companyId)
-      .in('role', ['hr_admin', 'it']),
-  ]);
+  const [{ data: taskRows }, documents, { data: managerProfile }, { data: staffMembers }, { data: equipmentRows }] =
+    await Promise.all([
+      client
+        .from('tasks')
+        .select('id, title, owner_role, owner_id, status, due_on, expected_document')
+        .eq('journey_id', journeyId)
+        .order('due_on'),
+      supabaseTaskDocumentRepository(client).listByJourney(journeyId),
+      managerId
+        ? client.from('profiles').select('full_name').eq('id', managerId).maybeSingle()
+        : Promise.resolve({ data: null }),
+      client
+        .from('company_members')
+        .select('user_id, role')
+        .eq('company_id', companyId)
+        .in('role', ['hr_admin', 'it']),
+      client
+        .from('equipment_requests')
+        .select('id, task_id, catalog_item_id, status')
+        .eq('journey_id', journeyId),
+    ]);
 
   const tasks = (taskRows ?? []) as TaskRow[];
   // Un document deja atteint pour une tache ne signifie pas que l employe l a
@@ -161,6 +175,22 @@ async function JourneyContent({
     (t) => t.owner_id === employeeId && t.expected_document !== null && !providedByEmployee.has(t.id),
   );
   const documentsToRead = documents.filter((doc) => doc.uploadedBy !== employeeId);
+
+  const equipmentToAcknowledge = (equipmentRows ?? []).filter((row: EquipmentRequestRow) =>
+    isAwaitingAcknowledgement({
+      id: row.id,
+      companyId,
+      journeyId,
+      taskId: row.task_id,
+      catalogItemId: row.catalog_item_id,
+      status: row.status,
+    }),
+  );
+  const equipmentCatalogIds = [...new Set(equipmentToAcknowledge.map((row: EquipmentRequestRow) => row.catalog_item_id))];
+  const { data: equipmentCatalogRows } = equipmentCatalogIds.length
+    ? await client.from('equipment_catalog_items').select('id, name').in('id', equipmentCatalogIds)
+    : { data: [] as { id: string; name: string }[] };
+  const equipmentNameById = new Map((equipmentCatalogRows ?? []).map((row) => [row.id, row.name]));
 
   const contacts = [
     ...(managerProfile ? [{ name: managerProfile.full_name, role: 'manager' as const }] : []),
@@ -253,6 +283,38 @@ async function JourneyContent({
               </ul>
             )}
           </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="Mon matériel"
+          description="Ce qui vous a été remis et attend votre confirmation."
+        />
+        <CardBody>
+          {equipmentToAcknowledge.length === 0 ? (
+            <EmptyState
+              title="Rien à confirmer pour le moment"
+              description="Le matériel qui vous sera remis apparaîtra ici pour confirmation."
+            />
+          ) : (
+            <ul className="space-y-2">
+              {equipmentToAcknowledge.map((request: EquipmentRequestRow) => (
+                <li
+                  key={request.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius)] border border-border px-3 py-2 text-sm"
+                >
+                  <span className="text-text">
+                    {equipmentNameById.get(request.catalog_item_id) ?? 'Matériel'}
+                  </span>
+                  <AcknowledgeEquipmentButton
+                    requestId={request.id}
+                    itemName={equipmentNameById.get(request.catalog_item_id) ?? 'ce matériel'}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
         </CardBody>
       </Card>
 

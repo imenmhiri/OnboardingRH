@@ -17,5 +17,7 @@ export default async function HomePage() {
     redirect('/portail');
   }
 
-  redirect(landingArea(session.context.membership.role) === 'cockpit' ? '/cockpit' : '/portail');
+  const landing = landingArea(session.context.membership.role);
+  const path = landing === 'cockpit' ? '/cockpit' : landing === 'equipment' ? '/materiel' : '/portail';
+  redirect(path);
 }

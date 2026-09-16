@@ -1,4 +1,4 @@
-import { FileStack } from 'lucide-react';
+import { FileStack, Laptop } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { BlockedTasksCard } from './blocked-tasks';
@@ -38,6 +38,7 @@ export default async function CockpitPage({
   }
   const { companyId, companyName } = session.context.membership;
   const canBuildJourneys = canAccess(session.context.membership.role, 'journey_builder');
+  const canManageEquipment = canAccess(session.context.membership.role, 'equipment');
   const filters = await searchParams;
 
   const client = await createSupabaseServerClient();
@@ -56,7 +57,7 @@ export default async function CockpitPage({
   if (journeysError) {
     return (
       <div className="space-y-8">
-        <PageHeader companyName={companyName} canBuildJourneys={canBuildJourneys} />
+        <PageHeader companyName={companyName} canBuildJourneys={canBuildJourneys} canManageEquipment={canManageEquipment} />
         <ErrorState description="Impossible de charger les parcours pour le moment. Réessayez dans un instant." />
       </div>
     );
@@ -86,7 +87,7 @@ export default async function CockpitPage({
 
   return (
     <div className="space-y-8">
-      <PageHeader companyName={companyName} canBuildJourneys={canBuildJourneys} />
+      <PageHeader companyName={companyName} canBuildJourneys={canBuildJourneys} canManageEquipment={canManageEquipment} />
 
       <CockpitFilters
         sites={sites}
@@ -106,9 +107,11 @@ export default async function CockpitPage({
 function PageHeader({
   companyName,
   canBuildJourneys,
+  canManageEquipment,
 }: {
   readonly companyName: string;
   readonly canBuildJourneys: boolean;
+  readonly canManageEquipment: boolean;
 }) {
   return (
     <header className="flex flex-wrap items-start justify-between gap-4">
@@ -118,14 +121,24 @@ function PageHeader({
           Arrivées à venir, tâches bloquées et satisfaction, pour {companyName}.
         </p>
       </div>
-      {canBuildJourneys ? (
-        <Button asChild variant="secondary">
-          <Link href="/parcours">
-            <FileStack aria-hidden className="size-4" />
-            Créateur de parcours
-          </Link>
-        </Button>
-      ) : null}
+      <div className="flex flex-wrap gap-2">
+        {canManageEquipment ? (
+          <Button asChild variant="secondary">
+            <Link href="/materiel">
+              <Laptop aria-hidden className="size-4" />
+              Matériel
+            </Link>
+          </Button>
+        ) : null}
+        {canBuildJourneys ? (
+          <Button asChild variant="secondary">
+            <Link href="/parcours">
+              <FileStack aria-hidden className="size-4" />
+              Créateur de parcours
+            </Link>
+          </Button>
+        ) : null}
+      </div>
     </header>
   );
 }
