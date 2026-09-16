@@ -144,29 +144,61 @@ déjà créé (`200`, `status: "duplicate"`) au lieu d'en produire un second.
 (`ambiguous_match`) renvoient un `422` avec la raison, jamais un parcours vide. Le workflow branche ce
 cas vers une alerte RH.
 
-**Ce qu'il envoie, et ce qu'il n'envoie pas encore** — la création du parcours écrit dans
-`audit_events` l'intention de notifier chaque responsable assigné
-(`journey.owner_notification_pending`), l'envoi différé de l'email de bienvenue calé sur la date
-d'arrivée (`journey.welcome_email_pending`) et la création des événements d'agenda
-(`journey.calendar_events_pending`). **Aucun email ni événement d'agenda réel n'est envoyé par W1** :
-Resend (T-24) et l'intégration calendrier (T-25) ne sont pas encore construits. C'est un point
-d'accroche documenté, pas un envoi simulé — brancher T-24/T-25 sur ces événements d'audit suffira.
+**Ce qu'il envoie** — la création du parcours écrit dans `audit_events` l'intention de notifier
+chaque responsable assigné (`journey.owner_notification_pending`, en attente d'un déclencheur réel —
+T-22/flux d'attribution), la création des événements d'agenda (`journey.calendar_events_pending`, en
+attente de T-25). **L'email de bienvenue, lui, est réellement envoyé (T-24)** : une branche parallèle
+du workflow attend la date calculée par `resolveWelcomeEmailSendDate`
+(`journey.welcome_email_pending` porte cette date, `sendWelcomeEmailAt`, dans sa charge utile), puis
+appelle `POST /api/notifications/welcome-email`
+([src/app/api/notifications/welcome-email/route.ts](src/app/api/notifications/welcome-email/route.ts))
+qui délègue au cas d'usage
+[`sendWelcomeEmail`](src/application/use-cases/send-welcome-email.ts) : résolution du canal (email
+personnel → professionnel → manager, tracée dans `audit_events` quel que soit le canal retenu),
+rendu du gabarit français (HTML + texte brut, marque de la société), envoi via Resend, trace de
+succès ou d'échec. Idempotent : un parcours déjà notifié (`journeys.welcome_email_sent_at`) ne
+reçoit jamais un second envoi, même si le webhook est rejoué.
 
 **Variables d'environnement** — `SUPABASE_SERVICE_ROLE_KEY` (la route agit sans session utilisateur,
 donc sans RLS ; l'autorisation vient du secret webhook), `N8N_WEBHOOK_SECRET`, `N8N_WEBHOOK_URL`
-(déclenché côté n8n, documenté pour mémoire).
+(déclenché côté n8n, documenté pour mémoire), `RESEND_API_KEY`, `RESEND_FROM`, `NEXT_PUBLIC_APP_URL`
+(lien du portail dans l'email).
 
 **Export** — [workflows/w1-validated-hire.json](workflows/w1-validated-hire.json). Aucune instance
 n8n n'a pu tourner dans cet environnement (sandbox sans accès réseau vérifié pour `npx n8n`, voir
 [docs/tickets/T-21-w1-embauche-validee.md](docs/tickets/T-21-w1-embauche-validee.md)) : le JSON est
 écrit à la main selon le schéma documenté par n8n, et la partie réelle est vérifiée en appelant
-directement la route (`Invoke-RestMethod`), preuve détaillée dans le ticket de clôture.
+directement les routes (`Invoke-WebRequest`), preuve détaillée dans les tickets de clôture T-21 et
+T-24.
+
+### Emails transactionnels — Resend (T-24)
+
+Port `Mailer` ([src/application/ports/mailer.ts](src/application/ports/mailer.ts)) et implémentation
+Resend ([src/infrastructure/resend/mailer.ts](src/infrastructure/resend/mailer.ts)) : le domaine et
+les cas d'usage ne connaissent que l'interface, ce qui rend l'envoi testable sans clé d'API réelle.
+Cinq gabarits français dans `src/infrastructure/resend/templates/` (bienvenue, tâche assignée,
+relance, escalade, questionnaire), tous construits et testés HTML + texte brut, personnalisés par la
+marque de la société (logo si présent, sinon le nom en texte — les deux sociétés de démonstration
+n'ont pas de logo). Seul le gabarit de bienvenue est branché à un déclencheur réel aujourd'hui (voir
+W1 ci-dessus) ; les quatre autres attendent leur déclencheur (T-22, T-23, flux d'attribution des
+tâches).
+
+Aucune pièce jointe, aucun lien signé à durée illimitée : les emails pointent vers le portail
+(authentification Supabase déjà en place) plutôt que de contourner la connexion. Un employé sans
+email personnel bascule vers l'adresse professionnelle puis vers le manager, sans échec silencieux —
+le canal effectivement utilisé est toujours tracé dans `audit_events`. Un échec ou un rejet Resend
+laisse la tâche ouverte et écrit `email.delivery_failed` avec le canal et la raison.
+
+Détail complet, preuves d'exécution réelle et dette restante :
+[docs/tickets/T-24-emails-resend.md](docs/tickets/T-24-emails-resend.md).
 
 ## Limites connues
 
-- Resend et l'intégration agenda ne sont pas encore branchés : W1 enregistre l'intention dans le
-  journal d'audit (voir ci-dessus) sans envoyer quoi que ce soit. W2 (retard critique) et W3 (bilan
-  J+30) restent à construire.
+- Aucune livraison Resend réelle n'a été vérifiée (pas de clé d'API réelle disponible dans cet
+  environnement) : le chemin d'envoi est vérifié de bout en bout jusqu'à l'appel réseau réel à
+  Resend, qui répond une erreur d'authentification (clé factice) — voir T-24.
+- Tâche assignée, relance, escalade, questionnaire : gabarits prêts et testés, pas encore branchés à
+  un déclencheur réel. W2 (retard critique) et W3 (bilan J+30) restent à construire.
 - Pas encore de déploiement public.
 
 ## Écarts d'accessibilité et de cohérence assumés (T-20)

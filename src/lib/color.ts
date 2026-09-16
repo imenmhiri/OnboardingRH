@@ -72,6 +72,28 @@ export function parseColor(value: string): Rgb | null {
   return parseHex(value) ?? parseOklch(value);
 }
 
+function toByte(channel: number): string {
+  return Math.round(clamp01(channel) * 255).toString(16).padStart(2, '0');
+}
+
+export function rgbToHex(color: Rgb): string {
+  return `#${toByte(color.r)}${toByte(color.g)}${toByte(color.b)}`;
+}
+
+/**
+ * Converts hex or oklch to hex. Email clients cannot be trusted to support
+ * `oklch()` (see `brandSurface`, whose accessible variant is often returned in
+ * that notation even when the stored brand colour is hex) — anything embedded
+ * in an email template goes through this first.
+ */
+export function toHex(value: string): string {
+  const parsed = parseColor(value);
+  if (!parsed) {
+    throw new RangeError(`Unsupported colour notation: "${value}".`);
+  }
+  return rgbToHex(parsed);
+}
+
 function linearise(channel: number): number {
   return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
 }

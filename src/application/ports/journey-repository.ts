@@ -21,6 +21,8 @@ export interface NewJourneyInput {
   readonly arrivalDate: PlainDate;
   /** Reference externe (ATS/HRIS) : c'est elle qui porte l'idempotence. */
   readonly hireReference: string;
+  /** Seule adresse qui joint un employe sans compte encore cree (voir T-24). */
+  readonly personalEmail: string | null;
 }
 
 export type InsertJourneyResult =

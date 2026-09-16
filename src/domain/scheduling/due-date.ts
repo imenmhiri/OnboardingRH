@@ -85,3 +85,19 @@ export function isOverdue(
 ): boolean {
   return workingDaysLate(dueDate, today, calendar) > 0;
 }
+
+/**
+ * L'email de bienvenue (W1/T-24) est un envoi differe, jamais immediat a la
+ * creation du parcours : il doit atterrir juste avant l'arrivee, pas des
+ * semaines a l'avance ni le jour meme sans marge. Le delai vit ici, pas dans
+ * le workflow n8n qui se contente d'attendre la date que cette fonction
+ * calcule.
+ */
+export const WELCOME_EMAIL_LEAD_WORKING_DAYS = 3;
+
+export function resolveWelcomeEmailSendDate(
+  arrivalDate: PlainDate,
+  calendar: WorkingCalendar,
+): PlainDate {
+  return computeDueDate(arrivalDate, -WELCOME_EMAIL_LEAD_WORKING_DAYS, calendar);
+}

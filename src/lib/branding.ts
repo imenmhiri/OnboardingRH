@@ -13,6 +13,18 @@ export interface CompanyBranding {
   readonly logoUrl: string | null;
 }
 
+/**
+ * Repli utilise quand une societe n'a pas ete resolue (ex. un email a envoyer
+ * alors que la lecture de `companies` echoue) : le gabarit reste envoyable
+ * plutot que de planter sur un branding absent.
+ */
+export const FALLBACK_BRANDING: CompanyBranding = {
+  name: 'OnboardingRH',
+  primary: '#111827',
+  accent: '#2563eb',
+  logoUrl: null,
+};
+
 export interface BrandVariables extends CSSProperties {
   readonly '--brand': string;
   readonly '--brand-text': string;

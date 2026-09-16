@@ -110,7 +110,7 @@
             {
               "name": "note",
               "type": "string",
-              "value": "Point d'accroche T-24/T-25 : le parcours enregistre déjà, dans audit_events, qui doit être notifié (journey.owner_notification_pending), l'envoi différé de l'email de bienvenue (journey.welcome_email_pending) et la création des événements d'agenda (journey.calendar_events_pending). Aucun envoi réel n'a lieu tant que ces tickets ne livrent pas Resend et l'intégration calendrier — ce nœud est un espace réservé documenté, pas une notification simulée."
+              "value": "L'email de bienvenue est désormais envoyé réellement, en différé, par la branche parallèle 'Attendre la date d'envoi (T-24)' → 'Envoyer l'email de bienvenue (T-24)'. Ce nœud reste un espace réservé documenté pour les deux notifications encore en attente d'un déclencheur réel : celle des responsables de tâche (journey.owner_notification_pending — attend un flux d'attribution) et les événements d'agenda (journey.calendar_events_pending, T-25)."
             }
           ]
         },
@@ -171,6 +171,102 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.3,
       "position": [860, 260]
+    },
+    {
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ $json.body.sendWelcomeEmailAt }}T08:00:00"
+      },
+      "id": "1f2b1a10-0008-4a11-8a11-000000000008",
+      "name": "Attendre la date d'envoi (T-24)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [600, 40],
+      "notes": "La date vient de src/domain/scheduling/due-date.ts (resolveWelcomeEmailSendDate), renvoyee par POST /api/hires/validated — aucun calcul de date dans n8n. Ce noeud n'attend pas la reponse HTTP deja envoyee sur la branche parallele 'Répondre au webhook' : les deux branches partent du meme embranchement 'Créé' et s'executent independamment."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ONBOARDING_APP_URL }}/api/notifications/welcome-email",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-webhook-secret",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET }}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  companyId: $('Webhook — Embauche validée').item.json.body.companyId,\n  journeyId: $json.body.journeyId\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "id": "1f2b1a10-0009-4a11-8a11-000000000009",
+      "name": "Envoyer l'email de bienvenue (T-24)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 40],
+      "notes": "Aucune donnee personnelle dans ce corps : seulement des identifiants. Le nom et l'adresse du destinataire sont relus par l'application au moment de l'envoi (src/application/use-cases/send-welcome-email.ts), avec bascule tracee vers le canal alternatif si l'employe n'a pas d'email personnel."
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.statusCode }}",
+                    "rightValue": 200,
+                    "operator": { "type": "number", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Envoyé (ou déjà envoyé)"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra", "renameFallbackOutput": "Échec — alerte RH" }
+      },
+      "id": "1f2b1a10-0010-4a11-8a11-000000000010",
+      "name": "Vérifier l'envoi",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [1100, 40]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "alerte",
+              "type": "string",
+              "value": "=Email de bienvenue non envoyé pour le parcours {{ $('Envoyer l'email de bienvenue (T-24)').item.json.body?.journeyId ?? $('Webhook — Embauche validée').item.json.body.hireReference }} : {{ $json.body?.error ?? 'réponse inattendue' }} (statut {{ $json.statusCode }}). Trace complète dans audit_events (email.no_channel_available / email.delivery_failed) — voir send-welcome-email.ts."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1f2b1a10-0011-4a11-8a11-000000000011",
+      "name": "Alerter la RH — Email de bienvenue en échec",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1340, 40]
     }
   ],
   "connections": {
@@ -182,7 +278,10 @@
     },
     "Brancher sur la réponse": {
       "main": [
-        [{ "node": "Notifier les responsables (à câbler en T-24/T-25)", "type": "main", "index": 0 }],
+        [
+          { "node": "Notifier les responsables (à câbler en T-24/T-25)", "type": "main", "index": 0 },
+          { "node": "Attendre la date d'envoi (T-24)", "type": "main", "index": 0 }
+        ],
         [{ "node": "Ignorer (doublon)", "type": "main", "index": 0 }],
         [{ "node": "Alerter la RH — Échec explicite", "type": "main", "index": 0 }]
       ]
@@ -195,6 +294,18 @@
     },
     "Alerter la RH — Échec explicite": {
       "main": [[{ "node": "Répondre au webhook", "type": "main", "index": 0 }]]
+    },
+    "Attendre la date d'envoi (T-24)": {
+      "main": [[{ "node": "Envoyer l'email de bienvenue (T-24)", "type": "main", "index": 0 }]]
+    },
+    "Envoyer l'email de bienvenue (T-24)": {
+      "main": [[{ "node": "Vérifier l'envoi", "type": "main", "index": 0 }]]
+    },
+    "Vérifier l'envoi": {
+      "main": [
+        [],
+        [{ "node": "Alerter la RH — Email de bienvenue en échec", "type": "main", "index": 0 }]
+      ]
     }
   },
   "pinData": {},

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { brandSurface, contrastRatio, INK, meetsAA, PAPER, parseColor, readableTextOn, rgbToOklch } from './color';
+import { brandSurface, contrastRatio, INK, meetsAA, PAPER, parseColor, readableTextOn, rgbToOklch, toHex } from './color';
 
 describe('parseColor', () => {
   it('lit l hexadecimal long et court', () => {
@@ -21,6 +21,21 @@ describe('parseColor', () => {
   it('refuse une notation inconnue', () => {
     expect(parseColor('rebeccapurple')).toBeNull();
     expect(parseColor('rgb(1,2,3)')).toBeNull();
+  });
+});
+
+describe('toHex', () => {
+  it('laisse un hexadecimal deja normalise inchange', () => {
+    expect(toHex('#ffffff')).toBe('#ffffff');
+    expect(toHex('#000000')).toBe('#000000');
+  });
+
+  it('convertit l oklch stocke par les societes en hexadecimal, seule notation fiable dans un email', () => {
+    expect(toHex('oklch(1 0 0)')).toBe('#ffffff');
+  });
+
+  it('refuse une notation inconnue plutot que de produire un hex incorrect', () => {
+    expect(() => toHex('rebeccapurple')).toThrow(RangeError);
   });
 });
 

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { parsePlainDate, isBefore, type PlainDate } from '@/domain/scheduling/plain-date';
+import { resolveWelcomeEmailSendDate } from '@/domain/scheduling/due-date';
 import { selectTemplate, type JourneyTemplate } from '@/domain/templates/journey-template';
 import { instantiateJourney, type InstantiationDefect } from '@/domain/templates/journey-instantiation';
 import type { AssignmentDirectory } from '@/application/ports/assignment-directory';
@@ -30,10 +31,19 @@ export interface ValidatedHireInput {
   readonly arrivalDate: string;
   /** Reference externe (ATS/HRIS) : porte l'idempotence du webhook. */
   readonly hireReference: string;
+  /** Seule adresse qui joint un employe sans compte encore cree (voir T-24). */
+  readonly personalEmail: string | null;
 }
 
 export type CreateJourneyResult =
-  | { readonly ok: true; readonly journeyId: string; readonly status: 'created'; readonly arrivalInPast: boolean }
+  | {
+      readonly ok: true;
+      readonly journeyId: string;
+      readonly status: 'created';
+      readonly arrivalInPast: boolean;
+      /** Date a laquelle n8n doit declencher l'envoi differe de l'email de bienvenue (T-24). */
+      readonly sendWelcomeEmailAt: PlainDate;
+    }
   | { readonly ok: true; readonly journeyId: string; readonly status: 'duplicate' }
   | { readonly ok: false; readonly reason: 'invalid_arrival_date' }
   | { readonly ok: false; readonly reason: 'no_match' }
@@ -168,6 +178,7 @@ export async function createJourneyFromValidatedHire(
     managerId: input.managerId,
     arrivalDate,
     hireReference: input.hireReference,
+    personalEmail: input.personalEmail,
   });
 
   if (!insertResult.ok) {
@@ -235,6 +246,8 @@ export async function createJourneyFromValidatedHire(
     });
   }
 
+  const sendWelcomeEmailAt = resolveWelcomeEmailSendDate(arrivalDate, calendar);
+
   await ports.audit.record({
     companyId: input.companyId,
     actorId: SYSTEM_ACTOR,
@@ -244,8 +257,8 @@ export async function createJourneyFromValidatedHire(
       origin: 'w1-validated-hire',
       employeeId: input.employeeId,
       arrivalDate,
-      note: 'Envoi differe, cale sur la date d\'arrivee — livre par T-24.',
-      deferredTo: 'T-24',
+      sendWelcomeEmailAt,
+      note: 'Envoi differe, cale sur la date d\'arrivee — le webhook n8n attend sendWelcomeEmailAt avant d\'appeler /api/notifications/welcome-email (T-24).',
     },
   });
 
@@ -257,5 +270,5 @@ export async function createJourneyFromValidatedHire(
     payload: { origin: 'w1-validated-hire', arrivalDate, deferredTo: 'T-25' },
   });
 
-  return { ok: true, journeyId, status: 'created', arrivalInPast };
+  return { ok: true, journeyId, status: 'created', arrivalInPast, sendWelcomeEmailAt };
 }

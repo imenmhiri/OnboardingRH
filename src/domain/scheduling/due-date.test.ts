@@ -8,6 +8,7 @@ import {
   hasMoved,
   isOverdue,
   rescheduleForArrivalDate,
+  resolveWelcomeEmailSendDate,
   scheduleDeadlines,
   workingDaysLate,
 } from './due-date';
@@ -38,6 +39,17 @@ describe('computeDueDate', () => {
   it('traverse un jour ferie sans le compter', () => {
     // Arrivee le jeudi 2 avril, +2 ouvres : vendredi 3, lundi 6 ferie, mardi 7.
     expect(computeDueDate(d('2026-04-02'), 2, calendar)).toBe('2026-04-07');
+  });
+});
+
+describe('resolveWelcomeEmailSendDate', () => {
+  it('place l envoi differe trois jours ouvres avant l arrivee', () => {
+    expect(resolveWelcomeEmailSendDate(d('2026-03-02'), calendar)).toBe('2026-02-25');
+  });
+
+  it('traverse un jour ferie sans le compter', () => {
+    // Arrivee le mardi 7 avril, -3 ouvres en sautant le lundi de Paques (6 avril, ferie).
+    expect(resolveWelcomeEmailSendDate(d('2026-04-07'), calendar)).toBe('2026-04-01');
   });
 });
 
