@@ -11,6 +11,7 @@ import {
   fakeJourneyRepository,
   fakeTemplateRepository,
 } from './create-journey-test-fixtures';
+import { fakeCalendar, fakeCalendarEventContext, fakeCalendarEventRepository } from './calendar-test-fixtures';
 
 const d = parsePlainDate;
 
@@ -84,17 +85,29 @@ function ports(details: readonly TemplateDetail[] = [STANDARD_TEMPLATE]) {
   const directory = fakeAssignmentDirectory();
   const { audit, events } = fakeAudit();
   const clock = fakeClock(d('2026-04-01'));
+  const { repository: calendarEvents, rows: calendarEventRows } = fakeCalendarEventRepository();
 
   return {
-    ports: { templates, journeys: journeyRepo.repository, calendar, directory, audit, clock },
+    ports: {
+      templates,
+      journeys: journeyRepo.repository,
+      calendar,
+      directory,
+      audit,
+      clock,
+      calendarEvents,
+      calendarClient: fakeCalendar(),
+      calendarContext: fakeCalendarEventContext(),
+    },
     journeyRepo,
     events,
+    calendarEventRows,
   };
 }
 
 describe('createJourneyFromValidatedHire', () => {
   it('cree le parcours, instancie les taches et attribue les responsables', async () => {
-    const { ports: p, journeyRepo, events } = ports();
+    const { ports: p, journeyRepo, events, calendarEventRows } = ports();
 
     const result = await createJourneyFromValidatedHire(p, baseInput());
 
@@ -110,18 +123,33 @@ describe('createJourneyFromValidatedHire', () => {
     expect(welcomeTask).toBeDefined();
     expect(welcomeTask && journeyRepo.owners.get(welcomeTask.id)).toBe('user-manager');
 
+    // Regression T-25 : le decalage en jours ouvres de chaque tache doit être
+    // persiste, sinon un report d'arrivee ulterieur (`reschedule-journey.ts`)
+    // recalculerait toutes les echeances sur le meme jour (decalage 0 partout).
+    const contractTask = tasks?.find((t) => t.title === 'Contrat signé');
+    expect(contractTask && journeyRepo.offsetsByTask.get(contractTask.id)).toBe(-5);
+    const itTask = tasks?.find((t) => t.title === 'Créer le compte IT');
+    expect(itTask && journeyRepo.offsetsByTask.get(itTask.id)).toBe(-2);
+    expect(welcomeTask && journeyRepo.offsetsByTask.get(welcomeTask.id)).toBe(0);
+
     expect(events.map((e) => e.action)).toEqual(
       expect.arrayContaining([
         'journey.created',
         'journey.owner_notification_pending',
         'journey.welcome_email_pending',
-        'journey.calendar_events_pending',
+        'calendar.event_created',
       ]),
     );
     expect(events.every((e) => e.actorId === null)).toBe(true);
 
     const welcomeEmailEvent = events.find((e) => e.action === 'journey.welcome_email_pending');
     expect(welcomeEmailEvent?.payload).toMatchObject({ sendWelcomeEmailAt: '2026-04-15' });
+
+    // Seule la tache "Accueil" (echeance = date d'arrivee) tombe dans la
+    // premiere semaine ; les autres taches de ce template sont anterieures a
+    // l'arrivee et n'ont pas d'evenement.
+    expect([...calendarEventRows.values()]).toHaveLength(1);
+    expect([...calendarEventRows.values()][0]?.title).toBe('Accueil');
   });
 
   it('cas limite : meme embauche recue deux fois, aucun second parcours', async () => {

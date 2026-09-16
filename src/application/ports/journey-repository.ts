@@ -43,8 +43,22 @@ export interface JourneyRepository {
 
   insertJourney(input: NewJourneyInput): Promise<InsertJourneyResult>;
 
-  /** Ecrit les taches instanciees, dependances comprises, pour ce parcours. */
-  insertTasks(companyId: string, journeyId: string, tasks: readonly Task[]): Promise<void>;
+  /**
+   * Ecrit les taches instanciees, dependances comprises, pour ce parcours.
+   * `offsetsByTaskId` porte le decalage en jours ouvres de chaque tache
+   * (`template_tasks.offset_working_days`, perdu autrement : `Task`, cote
+   * domaine, ne garde que l'echeance deja calculee, pas la regle qui l'a
+   * produite). Un report d'arrivee (T-25, `reschedule-journey.ts`) en a
+   * besoin pour recalculer — jamais retraduire par un simple decalage de
+   * jours civils, qui ignorerait les feries et week-ends traverses
+   * differemment par la nouvelle date.
+   */
+  insertTasks(
+    companyId: string,
+    journeyId: string,
+    tasks: readonly Task[],
+    offsetsByTaskId: ReadonlyMap<string, number>,
+  ): Promise<void>;
 
   /** Null efface l'attribution : la tache redevient portee par l'equipe du role. */
   assignOwner(taskId: string, ownerId: string | null): Promise<void>;
@@ -57,4 +71,48 @@ export interface JourneyRepository {
    * valides).
    */
   updateJourneyStatus(journeyId: string, status: 'completed' | 'cancelled'): Promise<void>;
+
+  /** Ce qu'un report d'arrivee (T-25) doit relire avant de recalculer quoi que ce soit. */
+  findById(journeyId: string): Promise<JourneySummary | null>;
+
+  /**
+   * Ecrit la nouvelle date d'arrivee. Ne touche a rien d'autre : recalculer
+   * les echeances et deplacer les evenements d'agenda restent la
+   * responsabilite du cas d'usage appelant (`reschedule-journey.ts`), jamais
+   * de ce port.
+   */
+  updateArrivalDate(journeyId: string, arrivalDate: PlainDate): Promise<void>;
+
+  /**
+   * Les taches encore ouvertes d'un parcours, avec ce qu'il faut pour les
+   * replanifier : leur decalage en jours ouvres (fige a l'instanciation, voir
+   * `template_tasks.offset_working_days`), leur echeance actuelle, leur titre
+   * (reutilise tel quel comme titre d'evenement d'agenda — jamais invente) et
+   * leur responsable eventuel.
+   */
+  openTaskSchedules(journeyId: string): Promise<readonly OpenTaskSchedule[]>;
+
+  /** Ecrit les nouvelles echeances calculees par `rescheduleForArrivalDate` (domain/scheduling). */
+  updateTaskDueDates(changes: readonly TaskDueDateChange[]): Promise<void>;
+}
+
+export interface JourneySummary {
+  readonly id: string;
+  readonly companyId: string;
+  readonly siteId: string | null;
+  readonly arrivalDate: PlainDate;
+  readonly status: string;
+}
+
+export interface OpenTaskSchedule {
+  readonly taskId: string;
+  readonly title: string;
+  readonly ownerId: string | null;
+  readonly offsetInWorkingDays: number;
+  readonly dueDate: PlainDate;
+}
+
+export interface TaskDueDateChange {
+  readonly taskId: string;
+  readonly dueDate: PlainDate;
 }

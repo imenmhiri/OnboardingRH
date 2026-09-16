@@ -18,7 +18,7 @@
     "demo:report": "tsx scripts/demo/report.ts",
     "db:diff": "supabase db diff",
     "db:push": "supabase db push",
-    "db:verify": "node supabase/tests/rls-isolation.mjs && node supabase/tests/journeys-isolation.mjs && node supabase/tests/storage-isolation.mjs && node supabase/tests/equipment-isolation.mjs"
+    "db:verify": "node supabase/tests/rls-isolation.mjs && node supabase/tests/journeys-isolation.mjs && node supabase/tests/storage-isolation.mjs && node supabase/tests/equipment-isolation.mjs && node supabase/tests/calendar-events-isolation.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",

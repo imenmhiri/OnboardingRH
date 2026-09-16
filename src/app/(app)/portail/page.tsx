@@ -6,7 +6,8 @@ import { Card, CardBody, CardHeader } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/states';
 import { StatusBadge } from '@/components/ui/status';
 import { isAwaitingAcknowledgement, type EquipmentStatus } from '@/domain/equipment/equipment';
-import { addCalendarDays, comparePlainDates, parsePlainDate } from '@/domain/scheduling/plain-date';
+import { firstWeekEnd, isWithinFirstWeek } from '@/domain/scheduling/first-week';
+import { parsePlainDate } from '@/domain/scheduling/plain-date';
 import type { OwnerRole, TaskStatus } from '@/domain/tasks/task';
 import { supabaseTaskDocumentRepository } from '@/infrastructure/supabase/task-documents';
 import { createSupabaseServerClient } from '@/infrastructure/supabase/server-client';
@@ -59,6 +60,19 @@ interface EquipmentRequestRow {
   task_id: string | null;
   catalog_item_id: string;
   status: EquipmentStatus;
+}
+
+interface CalendarEventRow {
+  id: string;
+  task_id: string | null;
+  starts_at: string;
+  ends_at: string;
+  status: 'scheduled' | 'cancelled';
+}
+
+/** "2026-09-21T09:00:00" -> "09:00", sans jamais passer par `Date` (T-25). */
+function localTimeOf(startsAt: string): string {
+  return startsAt.slice(11, 16);
 }
 
 export default async function PortalPage() {
@@ -122,7 +136,7 @@ async function JourneyContent({
 }) {
   const client = await createSupabaseServerClient();
 
-  const [{ data: taskRows }, documents, { data: managerProfile }, { data: staffMembers }, { data: equipmentRows }] =
+  const [{ data: taskRows }, documents, { data: managerProfile }, { data: staffMembers }, { data: equipmentRows }, { data: calendarEventRows }] =
     await Promise.all([
       client
         .from('tasks')
@@ -142,6 +156,16 @@ async function JourneyContent({
         .from('equipment_requests')
         .select('id, task_id, catalog_item_id, status')
         .eq('journey_id', journeyId),
+      // Echec d'integration degrade proprement (T-25) : si cette lecture
+      // echoue ou ne renvoie rien (agenda jamais synchronise, panne au moment
+      // de la creation), `calendarEventRows` reste vide et l'agenda retombe
+      // sur la liste de taches simple — le portail ne depend jamais d'un
+      // appel reussi a l'API Google pour s'afficher.
+      client
+        .from('calendar_events')
+        .select('id, task_id, starts_at, ends_at, status')
+        .eq('journey_id', journeyId)
+        .eq('status', 'scheduled'),
     ]);
 
   const tasks = (taskRows ?? []) as TaskRow[];
@@ -166,9 +190,10 @@ async function JourneyContent({
   const progressPercent = tasks.length > 0 ? Math.round((done / tasks.length) * 100) : 0;
 
   const arrival = parsePlainDate(arrivalDate);
-  const weekEnd = addCalendarDays(arrival, 7);
-  const firstWeekTasks = tasks.filter(
-    (t) => comparePlainDates(parsePlainDate(t.due_on), arrival) >= 0 && comparePlainDates(parsePlainDate(t.due_on), weekEnd) <= 0,
+  const weekEnd = firstWeekEnd(arrival);
+  const firstWeekTasks = tasks.filter((t) => isWithinFirstWeek(parsePlainDate(t.due_on), arrival));
+  const calendarEventByTaskId = new Map(
+    ((calendarEventRows ?? []) as CalendarEventRow[]).filter((row) => row.task_id).map((row) => [row.task_id as string, row]),
   );
 
   const myOpenTasksNeedingDocument = tasks.filter(
@@ -239,12 +264,17 @@ async function JourneyContent({
             <EmptyState title="Rien de prévu pour l’instant" description="Votre agenda se remplira à l’approche de votre arrivée." />
           ) : (
             <ul className="space-y-2">
-              {firstWeekTasks.map((task) => (
-                <li key={task.id} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-text">{task.title}</span>
-                  <span className="text-text-muted">{task.due_on}</span>
-                </li>
-              ))}
+              {firstWeekTasks.map((task) => {
+                const event = calendarEventByTaskId.get(task.id);
+                return (
+                  <li key={task.id} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-text">{task.title}</span>
+                    <span className="text-text-muted">
+                      {event ? `${task.due_on} à ${localTimeOf(event.starts_at)}` : task.due_on}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </CardBody>

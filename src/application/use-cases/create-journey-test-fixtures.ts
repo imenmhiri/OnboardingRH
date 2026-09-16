@@ -54,6 +54,7 @@ export function fakeJourneyRepository(overrides: Partial<JourneyRepository> = {}
   const byHireReference = new Map<string, string>();
   const tasksByJourney = new Map<string, Task[]>();
   const owners = new Map<string, string | null>();
+  const offsetsByTask = new Map<string, number>();
 
   const repository: JourneyRepository = {
     async findByHireReference(companyId: string, hireReference: string) {
@@ -69,8 +70,11 @@ export function fakeJourneyRepository(overrides: Partial<JourneyRepository> = {}
       byHireReference.set(key, input.id);
       return { ok: true };
     },
-    async insertTasks(_companyId: string, journeyId: string, tasks: readonly Task[]) {
+    async insertTasks(_companyId: string, journeyId: string, tasks: readonly Task[], offsetsByTaskId: ReadonlyMap<string, number>) {
       tasksByJourney.set(journeyId, [...tasks]);
+      for (const task of tasks) {
+        offsetsByTask.set(task.id, offsetsByTaskId.get(task.id) ?? 0);
+      }
     },
     async assignOwner(taskId: string, ownerId: string | null) {
       owners.set(taskId, ownerId);
@@ -78,10 +82,50 @@ export function fakeJourneyRepository(overrides: Partial<JourneyRepository> = {}
     async updateJourneyStatus() {
       // Non utilise par ces tests (W1) ; W3 (T-23) a son propre jeu de fixtures.
     },
+    async findById(journeyId: string) {
+      const row = journeys.get(journeyId);
+      if (!row) return null;
+      return {
+        id: journeyId,
+        companyId: row.input.companyId,
+        siteId: row.input.siteId,
+        arrivalDate: row.input.arrivalDate,
+        status: 'scheduled',
+      };
+    },
+    async updateArrivalDate(journeyId: string, arrivalDate) {
+      const row = journeys.get(journeyId);
+      if (row) {
+        journeys.set(journeyId, { input: { ...row.input, arrivalDate } });
+      }
+    },
+    async openTaskSchedules(journeyId: string) {
+      const tasks = tasksByJourney.get(journeyId) ?? [];
+      return tasks
+        .filter((task) => task.status === 'pending' || task.status === 'in_progress')
+        .map((task) => ({
+          taskId: task.id,
+          title: task.title,
+          ownerId: owners.get(task.id) ?? task.ownerId,
+          offsetInWorkingDays: offsetsByTask.get(task.id) ?? 0,
+          dueDate: task.dueDate,
+        }));
+    },
+    async updateTaskDueDates(changes) {
+      for (const [journeyId, tasks] of tasksByJourney) {
+        tasksByJourney.set(
+          journeyId,
+          tasks.map((task) => {
+            const change = changes.find((c) => c.taskId === task.id);
+            return change ? { ...task, dueDate: change.dueDate } : task;
+          }),
+        );
+      }
+    },
     ...overrides,
   };
 
-  return { repository, journeys, tasksByJourney, owners };
+  return { repository, journeys, tasksByJourney, owners, offsetsByTask };
 }
 
 export function fakeCalendarDirectory(calendar: WorkingCalendar = createWorkingCalendar()): CalendarDirectory {
