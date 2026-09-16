@@ -4,6 +4,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
 import { acknowledgeEquipment } from './actions';
 import { Button } from '@/components/ui/button';
+import { LiveRegion } from '@/components/ui/live-region';
 
 /**
  * Confirme la reception d'un materiel deja remis. Un accuse en retard laisse
@@ -58,13 +59,7 @@ export function AcknowledgeEquipmentButton({
           {error}
         </p>
       ) : null}
-      {/* Live region : la confirmation change l'affichage sans navigation, elle
-          doit donc etre annoncee explicitement plutot que seulement visible.
-          Reste montee dans les deux etats, sinon l'annonce ne se produit
-          jamais — defaut trouve en verifiant ce script au clavier. */}
-      <p role="status" aria-live="polite" className="sr-only">
-        {acknowledged ? `Réception de ${itemName} confirmée.` : ''}
-      </p>
+      <LiveRegion message={acknowledged ? `Réception de ${itemName} confirmée.` : ''} />
     </div>
   );
 }

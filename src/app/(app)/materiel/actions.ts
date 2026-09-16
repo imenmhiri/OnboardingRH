@@ -60,7 +60,7 @@ export async function createEquipmentRequest(formData: FormData): Promise<void> 
   }
 
   revalidatePath('/materiel');
-  redirect('/materiel');
+  redirect('/materiel?succes=demande');
 }
 
 function redirectOnRefusal(result: TransitionEquipmentRequestResult): void {
@@ -68,6 +68,18 @@ function redirectOnRefusal(result: TransitionEquipmentRequestResult): void {
     redirect('/materiel?erreur=transition_refusee');
   }
 }
+
+/**
+ * Message de confirmation par statut d'arrivee. Ces actions redirigent toutes
+ * vers la meme URL (`/materiel`) : contrairement a une navigation vers une
+ * page differente, ce changement n'a rien de visible par defaut pour un
+ * lecteur d'ecran — d'ou la region vive lue depuis ce paramètre, sur le même
+ * principe que `erreur`.
+ */
+const SUCCESS_BY_TARGET_STATUS: Partial<Record<EquipmentStatus, string>> = {
+  handed_over: 'remis',
+  requested: 'repris',
+};
 
 /** Une transition sans donnee supplementaire : commander, remettre, reprendre, annuler. */
 export async function transitionRequest(requestId: string, to: EquipmentStatus): Promise<void> {
@@ -81,7 +93,8 @@ export async function transitionRequest(requestId: string, to: EquipmentStatus):
   redirectOnRefusal(result);
 
   revalidatePath('/materiel');
-  redirect('/materiel');
+  const succes = SUCCESS_BY_TARGET_STATUS[to];
+  redirect(succes ? `/materiel?succes=${succes}` : '/materiel');
 }
 
 /** Marque commandee une commande groupee : meme modele, plusieurs arrivees. */
@@ -100,7 +113,7 @@ export async function markGroupOrdered(requestIds: readonly string[]): Promise<v
   }
 
   revalidatePath('/materiel');
-  redirect('/materiel');
+  redirect('/materiel?succes=commande');
 }
 
 export interface AssignState {

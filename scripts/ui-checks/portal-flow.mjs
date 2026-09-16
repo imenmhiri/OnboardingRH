@@ -52,9 +52,14 @@ const provideSection = page.locator('h3', { hasText: 'À fournir' }).locator('..
 check('Une piece attendue apparait dans « a fournir »', (await provideSection.getByRole('button', { name: 'Déposer' }).count()) > 0);
 
 // --- Cas limite : type de fichier refuse (un script, pas un document). ---
+// `process.argv[1]` est le chemin de CE script sous Node (`node script.mjs a b`
+// donne argv = [node, script.mjs, a, b]) : le premier argument utilisateur est
+// donc `process.argv[2]`, pas `process.argv[1]` — decalage trouve en essayant
+// reellement d'invoquer ce script pendant T-20, jamais exerce avant faute
+// d'argument documente. Voir scripts/ui-checks/README.md pour l'usage.
 await provideSection.getByRole('button', { name: 'Déposer' }).first().click();
 await page.getByRole('dialog').waitFor({ timeout: 5000 });
-await page.locator('input[type="file"]').setInputFiles(process.argv[1]);
+await page.locator('input[type="file"]').setInputFiles(process.argv[2]);
 await page.getByRole('button', { name: 'Déposer', exact: true }).click();
 const refusalAlert = page.getByRole('alert').filter({ hasText: /accepté|Mo/ });
 await refusalAlert.waitFor({ timeout: 5000 }).catch(() => {});
@@ -65,11 +70,14 @@ await page.getByRole('dialog').waitFor({ state: 'hidden', timeout: 5000 });
 // --- Depot reel d'un vrai PDF. ---
 await provideSection.getByRole('button', { name: 'Déposer' }).first().click();
 await page.getByRole('dialog').waitFor({ timeout: 5000 });
-await page.locator('input[type="file"]').setInputFiles(process.argv[2]);
+await page.locator('input[type="file"]').setInputFiles(process.argv[3]);
 await Promise.all([
   page.waitForLoadState('networkidle'),
   page.getByRole('button', { name: 'Déposer', exact: true }).click(),
 ]);
+// La fenetre se ferme desormais d'elle-meme des qu'un depot reussit (defaut
+// corrige pendant T-20 : elle restait ouverte sans rien annoncer). On attend
+// sa fermeture, pas une redirection — cette action n'en declenche aucune.
 await page.getByRole('dialog').waitFor({ state: 'hidden', timeout: 15000 });
 await page.reload({ waitUntil: 'networkidle' });
 

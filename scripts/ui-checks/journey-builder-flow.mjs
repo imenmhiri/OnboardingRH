@@ -68,6 +68,11 @@ await page.getByLabel('Titre').fill('Contrat signé');
 await page.getByLabel('Délai, en jours ouvrés').fill('-5');
 await page.getByRole('button', { name: 'Ajouter la tâche' }).click();
 await page.getByRole('dialog').waitFor({ state: 'hidden', timeout: 15000 });
+// Meme piege de timing que la puce de dependance plus bas (dialog masque des
+// que Radix le detecte, avant que la redirection vers la meme URL n'ait fini
+// de remplacer le contenu) : on attend l'apparition reelle plutot que de
+// compter aussitot.
+await taskItem(page, 'Contrat signé').first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
 check('La premiere tache (delai negatif) apparait dans la liste', (await taskItem(page, 'Contrat signé').count()) === 1);
 
 // 5. Deuxieme tache, dependante de la premiere.
@@ -78,8 +83,19 @@ await page.getByLabel('Délai, en jours ouvrés').fill('0');
 await page.getByRole('checkbox', { name: 'Contrat signé' }).check();
 await page.getByRole('button', { name: 'Ajouter la tâche' }).click();
 await page.getByRole('dialog').waitFor({ state: 'hidden', timeout: 15000 });
-const dependencyChip = await taskItem(page, 'Accueil et remise du matériel').locator('text=Dépend de').locator('..').locator('text=Contrat signé').count();
-check('La dependance choisie est affichee sous forme de puce', dependencyChip > 0);
+// Le formulaire redirige vers la meme page apres enregistrement : le dialogue
+// disparait du DOM des que Radix le detecte, ce qui peut precéder de peu la
+// fin du remplacement du contenu de la page par la nouvelle liste de taches.
+// Un compte immediat pouvait donc lire zero puce par pur hasard de timing —
+// defaut de script trouve pendant T-20, pas dans le produit (deja documente
+// comme flaky dans T-18). Corrige en attendant l'apparition de la puce plutot
+// que de la compter aussitot.
+const dependencyChip = taskItem(page, 'Accueil et remise du matériel')
+  .locator('text=Dépend de')
+  .locator('..')
+  .locator('text=Contrat signé');
+await dependencyChip.first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
+check('La dependance choisie est affichee sous forme de puce', (await dependencyChip.count()) > 0);
 
 // 6. Apercu : une arrivee qui traverse le lundi de Paques (ferie). Le
 // formulaire d'apercu reste sur place (useActionState) : on attend le
