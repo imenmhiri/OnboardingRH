@@ -5,12 +5,16 @@ import { selectTemplate, type JourneyTemplate } from '@/domain/templates/journey
 import { instantiateJourney, type InstantiationDefect } from '@/domain/templates/journey-instantiation';
 import type { AssignmentDirectory } from '@/application/ports/assignment-directory';
 import type { AuditTrail } from '@/application/ports/audit-trail';
+import type { Calendar } from '@/application/ports/calendar';
 import type { CalendarDirectory } from '@/application/ports/calendar-directory';
+import type { CalendarEventContextDirectory } from '@/application/ports/calendar-event-context';
+import type { CalendarEventRepository } from '@/application/ports/calendar-event-repository';
 import type { Clock } from '@/application/ports/clock';
 import type { JourneyRepository } from '@/application/ports/journey-repository';
 import type { TemplateRepository } from '@/application/ports/template-repository';
 import { toJourneyTemplate } from './manage-journey-templates';
 import { assignJourneyOwners } from './assign-journey-owners';
+import { createFirstWeekCalendarEvents } from './create-first-week-calendar-events';
 
 /**
  * W1 : une embauche validee devient un parcours complet. Ce cas d'usage est
@@ -57,6 +61,10 @@ export interface CreateJourneyPorts {
   readonly directory: AssignmentDirectory;
   readonly audit: AuditTrail;
   readonly clock: Clock;
+  /** Agenda de la première semaine (T-25) — voir le point d'accroche `journey.calendar_events_pending` plus bas. */
+  readonly calendarEvents: CalendarEventRepository;
+  readonly calendarClient: Calendar;
+  readonly calendarContext: CalendarEventContextDirectory;
 }
 
 /**
@@ -191,7 +199,12 @@ export async function createJourneyFromValidatedHire(
     throw new Error(`Parcours non cree pour ${input.hireReference} : contrainte d'unicite sans ligne retrouvee.`);
   }
 
-  await ports.journeys.insertTasks(input.companyId, journeyId, instantiation.tasks);
+  // Perdu autrement : `Task` ne garde que l'echeance calculee, pas le
+  // decalage qui l'a produite — necessaire au report d'arrivee (T-25).
+  const offsetsByTaskId = new Map(
+    template.taskDefinitions.map((definition) => [idByKey.get(definition.key) ?? definition.key, definition.offsetInWorkingDays]),
+  );
+  await ports.journeys.insertTasks(input.companyId, journeyId, instantiation.tasks, offsetsByTaskId);
 
   await ports.audit.record({
     companyId: input.companyId,
@@ -262,13 +275,32 @@ export async function createJourneyFromValidatedHire(
     },
   });
 
-  await ports.audit.record({
-    companyId: input.companyId,
-    actorId: SYSTEM_ACTOR,
-    action: 'journey.calendar_events_pending',
-    journeyId,
-    payload: { origin: 'w1-validated-hire', arrivalDate, deferredTo: 'T-25' },
-  });
+  // Point d'accroche T-25 : contrairement a l'email de bienvenue (differe a
+  // dessein), rien n'exige de retarder la creation des evenements d'agenda de
+  // la premiere semaine — elle se fait ici, synchrone, avec les taches et
+  // responsables deja resolus ci-dessus. Une panne du fournisseur agenda ne
+  // fait jamais echouer la creation du parcours : voir
+  // `createFirstWeekCalendarEvents`, qui ne remonte jamais d'exception.
+  const ownerIdByTaskId = new Map(
+    outcome.assignments
+      .filter((a) => a.assignment?.kind === 'person')
+      .map((a) => [a.taskId, (a.assignment as { kind: 'person'; ownerId: string }).ownerId] as const),
+  );
+  await createFirstWeekCalendarEvents(
+    { calendar: ports.calendarClient, calendarEvents: ports.calendarEvents, context: ports.calendarContext, audit: ports.audit },
+    {
+      companyId: input.companyId,
+      journeyId,
+      siteId: input.siteId,
+      arrivalDate,
+      tasks: instantiation.tasks.map((task) => ({
+        id: task.id,
+        title: task.title,
+        dueDate: task.dueDate,
+        ownerId: ownerIdByTaskId.get(task.id) ?? task.ownerId,
+      })),
+    },
+  );
 
   return { ok: true, journeyId, status: 'created', arrivalInPast, sendWelcomeEmailAt };
 }

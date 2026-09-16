@@ -265,6 +265,35 @@ laisse la tâche ouverte et écrit `email.delivery_failed` avec le canal et la r
 Détail complet, preuves d'exécution réelle et dette restante :
 [docs/tickets/T-24-emails-resend.md](docs/tickets/T-24-emails-resend.md).
 
+### Agenda de la première semaine — Google Calendar (T-25)
+
+Port `Calendar` ([src/application/ports/calendar.ts](src/application/ports/calendar.ts)) et
+implémentation Google Calendar REST
+([src/infrastructure/calendar/google-calendar.ts](src/infrastructure/calendar/google-calendar.ts)) :
+client HTTP injecté (même principe que `ResendLikeClient`), testable sans jeton réel. Les évènements
+créés sont persistés localement dans `calendar_events` — c'est cette table, jamais un appel direct à
+Google, que le portail employé lit pour afficher l'agenda : une panne du fournisseur agenda ne rend
+jamais le portail inutilisable, et une tâche sans évènement retombe sur la liste simple déjà construite
+en T-17.
+
+La création (synchrone, au moment où W1 crée le parcours) comme le report de date
+(`POST /api/journeys/reschedule`, même authentification par secret partagé que les autres webhooks)
+ne dupliquent jamais un évènement : `calendar_events` porte une contrainte unique par tâche, et un
+report déplace (`PATCH`) la ligne existante plutôt que d'en créer une nouvelle. Ce report comble aussi
+un vrai manque produit trouvé en construisant ce ticket : rien ne pouvait auparavant changer
+`journeys.arrival_date` ni recalculer les échéances déjà instanciées — voir
+[docs/tickets/T-25-agenda-premiere-semaine.md](docs/tickets/T-25-agenda-premiere-semaine.md) pour le
+détail, y compris un défaut corrigé dans le même mouvement (le décalage en jours ouvrés de chaque
+tâche n'était jamais écrit en base, ce qui aurait fait atterrir toutes les tâches recalculées sur la
+même date).
+
+Le fuseau horaire d'un évènement est celui du site s'il en déclare un, sinon celui de la société
+(`domain/companies/time-zone-resolution.ts`) — une filiale ou un site en horaire décalé n'est jamais
+un cas particulier codé en dur. Titre et description restent le texte déjà générique de la tâche
+(« Créer le compte IT »), jamais un nom, une adresse ou une référence de document. Un responsable sans
+compte agenda d'entreprise ne bloque pas l'évènement : il se crée sans participant nommé plutôt que
+d'échouer pour toute l'équipe.
+
 ## Limites connues
 
 - Aucune livraison Resend réelle n'a été vérifiée (pas de clé d'API réelle disponible dans cet
@@ -275,6 +304,13 @@ Détail complet, preuves d'exécution réelle et dette restante :
 - **Aucune page employé ne consomme encore le lien signé du questionnaire** (W3, T-23) : le jeton est
   réel, signé et limité dans le temps, mais sa destination (écran de réponse) n'existe pas encore
   dans `src/app/` — un vrai gap produit à couvrir par un futur ticket.
+- **Aucun identifiant Google Calendar réel disponible dans cet environnement** (T-25) : le chemin de
+  création/déplacement/annulation d'évènement est vérifié jusqu'à l'appel réseau réel à Google, qui
+  répond une erreur d'authentification (jeton factice) — même limite honnête que Resend et n8n.
+- **Aucun déclencheur produit ne fait encore passer un parcours au statut `cancelled`** : l'annulation
+  des évènements d'agenda d'un parcours annulé (T-25) est prête et testée
+  (`cancel-journey-calendar-events.ts`) mais n'est reliée à aucun flux réel — rien dans l'application
+  n'annule un parcours aujourd'hui.
 - Pas encore de déploiement public.
 
 ## Écarts d'accessibilité et de cohérence assumés (T-20)

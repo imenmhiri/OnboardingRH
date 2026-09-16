@@ -7,6 +7,9 @@ import { supabaseJourneyRepository } from '@/infrastructure/supabase/journey-rep
 import { supabaseCalendarDirectory } from '@/infrastructure/supabase/calendar-directory';
 import { supabaseAssignmentDirectory } from '@/infrastructure/supabase/assignment-directory';
 import { supabaseAuditTrail } from '@/infrastructure/supabase/audit-trail';
+import { supabaseCalendarEventRepository } from '@/infrastructure/supabase/calendar-events';
+import { supabaseCalendarEventContextDirectory } from '@/infrastructure/supabase/calendar-event-context';
+import { createGoogleCalendarFromEnv } from '@/infrastructure/calendar/google-calendar';
 import { createSystemClock } from '@/infrastructure/clock/system-clock';
 
 /**
@@ -121,6 +124,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       directory: supabaseAssignmentDirectory(client),
       audit: supabaseAuditTrail(client),
       clock: createSystemClock(company.time_zone),
+      calendarEvents: supabaseCalendarEventRepository(client),
+      // Cree tot et clairement une erreur si les identifiants Google manquent,
+      // plutot que de la decouvrir au premier appel — voir T-25.
+      calendarClient: createGoogleCalendarFromEnv(),
+      calendarContext: supabaseCalendarEventContextDirectory(client),
     },
     parsed.input,
   );

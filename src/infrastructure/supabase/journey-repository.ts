@@ -1,4 +1,12 @@
-import type { InsertJourneyResult, JourneyRepository, NewJourneyInput } from '@/application/ports/journey-repository';
+import type {
+  InsertJourneyResult,
+  JourneyRepository,
+  JourneySummary,
+  NewJourneyInput,
+  OpenTaskSchedule,
+  TaskDueDateChange,
+} from '@/application/ports/journey-repository';
+import { parsePlainDate } from '@/domain/scheduling/plain-date';
 import type { Task } from '@/domain/tasks/task';
 import { createSupabaseServiceClient } from './service-client';
 
@@ -46,7 +54,12 @@ export function supabaseJourneyRepository(client: SupabaseClient): JourneyReposi
       return { ok: true };
     },
 
-    async insertTasks(companyId: string, journeyId: string, tasks: readonly Task[]): Promise<void> {
+    async insertTasks(
+      companyId: string,
+      journeyId: string,
+      tasks: readonly Task[],
+      offsetsByTaskId: ReadonlyMap<string, number>,
+    ): Promise<void> {
       if (tasks.length === 0) return;
 
       const rows = tasks.map((task) => ({
@@ -57,6 +70,7 @@ export function supabaseJourneyRepository(client: SupabaseClient): JourneyReposi
         owner_role: task.ownerRole,
         owner_id: task.ownerId,
         due_on: task.dueDate,
+        offset_working_days: offsetsByTaskId.get(task.id) ?? 0,
         status: task.status,
         expected_document: task.expectedDocument,
         shared_key: task.sharedKey,
@@ -89,6 +103,54 @@ export function supabaseJourneyRepository(client: SupabaseClient): JourneyReposi
       const { error } = await client.from('journeys').update({ status }).eq('id', journeyId);
       if (error) {
         throw new Error(`Changement de statut impossible pour ${journeyId} : ${error.message}`);
+      }
+    },
+
+    async findById(journeyId: string): Promise<JourneySummary | null> {
+      const { data, error } = await client
+        .from('journeys')
+        .select('id, company_id, site_id, arrival_date, status')
+        .eq('id', journeyId)
+        .maybeSingle();
+      if (error || !data) return null;
+      return {
+        id: data.id,
+        companyId: data.company_id,
+        siteId: data.site_id,
+        arrivalDate: parsePlainDate(data.arrival_date),
+        status: data.status,
+      };
+    },
+
+    async updateArrivalDate(journeyId: string, arrivalDate): Promise<void> {
+      const { error } = await client.from('journeys').update({ arrival_date: arrivalDate }).eq('id', journeyId);
+      if (error) {
+        throw new Error(`Report d'arrivee impossible pour ${journeyId} : ${error.message}`);
+      }
+    },
+
+    async openTaskSchedules(journeyId: string): Promise<readonly OpenTaskSchedule[]> {
+      const { data, error } = await client
+        .from('tasks')
+        .select('id, title, owner_id, offset_working_days, due_on')
+        .eq('journey_id', journeyId)
+        .in('status', ['pending', 'in_progress']);
+      if (error || !data) return [];
+      return data.map((row) => ({
+        taskId: row.id,
+        title: row.title,
+        ownerId: row.owner_id,
+        offsetInWorkingDays: row.offset_working_days,
+        dueDate: parsePlainDate(row.due_on),
+      }));
+    },
+
+    async updateTaskDueDates(changes: readonly TaskDueDateChange[]): Promise<void> {
+      for (const change of changes) {
+        const { error } = await client.from('tasks').update({ due_on: change.dueDate }).eq('id', change.taskId);
+        if (error) {
+          throw new Error(`Report d'echeance impossible pour ${change.taskId} : ${error.message}`);
+        }
       }
     },
   };
