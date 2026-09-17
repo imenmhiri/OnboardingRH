@@ -260,7 +260,10 @@ export async function BlockedTasksCard({ journeys }: { readonly journeys: readon
       <CardBody>
         <ul className="space-y-4">
           {groups.map((group) => (
-            <li key={group.journeyId} className="rounded-[var(--radius)] border border-border p-4">
+            <li
+              key={group.journeyId}
+              className="rounded-[var(--radius)] border border-border border-l-4 border-l-brand bg-surface-sunken p-4"
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="font-semibold text-text">{group.employeeName}</h3>
                 <span className="text-sm text-text-muted">
