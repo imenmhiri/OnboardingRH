@@ -130,6 +130,12 @@ export function weekdayOf(date: PlainDate): Weekday {
   return weekday;
 }
 
+/** The Monday of the week containing `date` (the date itself when it is a Monday). */
+export function mondayOf(date: PlainDate): PlainDate {
+  const daysSinceMonday = (WEEKDAYS.indexOf(weekdayOf(date)) + 6) % 7;
+  return addCalendarDays(date, -daysSinceMonday);
+}
+
 /** Negative when `a` is earlier, positive when later, zero when equal. */
 export function comparePlainDates(a: PlainDate, b: PlainDate): number {
   return toEpochDay(a) - toEpochDay(b);

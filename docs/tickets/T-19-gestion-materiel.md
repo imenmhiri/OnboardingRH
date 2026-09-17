@@ -93,12 +93,13 @@ trouvé par `equipment-a11y.mjs`, corrigé en gardant la région montée dans le
 
 ## Cas limites couverts
 
-- **Même matériel demandé pour plusieurs arrivées le même jour** : Claire (à venir) et Diego (bloqué,
-  déjà arrivé) demandent chacun un « Ordinateur portable standard » — deux lignes `equipment_requests`
-  distinctes en base, une seule carte « × 2 » dans « Commandes à grouper », un seul bouton « Marquer
-  commandé » qui fait passer les deux à `ordered` en une action — vérifié à l'écran avec le compte IT
-  (`equipment-flow.mjs`) et par construction (`groupRequestsForOrder`, déjà testé en domaine depuis
-  T-15).
+- **Même matériel demandé pour plusieurs arrivées le même jour** : Claire et Bruno (à venir, même
+  jour d'arrivée) demandent chacun un « Ordinateur portable standard » — deux lignes
+  `equipment_requests` distinctes en base, une seule carte « × 2 » dans « Commandes à grouper », un
+  seul bouton « Marquer commandé » qui fait passer les deux à `ordered` en une action. L'ordinateur de
+  Diego, arrivé trois semaines plus tôt, reste une commande à part — vérifié à l'écran avec le compte
+  IT (`equipment-flow.mjs`) et en domaine (`groupRequestsForOrder`). Voir la correction ci-dessous :
+  la première version de ce ticket regroupait aussi Diego.
 - **Accusé de réception en retard : la tâche liée reste ouverte** : le badge de Diego est `handed_over`
   depuis le jeu de démo sans jamais avoir été accusé ; `blocksDependentTask` (domaine) continue de le
   compter comme bloquant tant que personne n'accuse réception, et le cockpit (T-18) le remonte déjà
@@ -194,6 +195,31 @@ que ce soit — corrigé en gardant la région montée dans les deux états
   dépendent d'aucun fichier externe, ont servi de garde-fou de régression à la place ; ce défaut de
   script préexistant est hors périmètre de ce ticket (aucun fichier de dépôt de document n'a été
   modifié ici).
+
+## Correction après livraison : regroupement par semaine d'arrivée
+
+Trouvé en test manuel : « Marquer commandé » faisait passer à la fois l'ordinateur de Claire (arrivée
+le 28 septembre) et celui de Diego (arrivé le 8 septembre). `groupRequestsForOrder` regroupait
+seulement par société et par modèle, sans regarder la date d'arrivée — contrairement à ce que ce
+ticket et le commentaire du domaine annonçaient (« arrivées simultanées »). Une arrivée déjà en retard
+et une autre trois semaines plus tard n'ont pas la même urgence ; les commander ensemble faisait
+attendre l'une ou presser l'autre.
+
+- **Règle retenue** : même société, même modèle **et même semaine d'arrivée** (lundi à dimanche,
+  `mondayOf` ajouté à `domain/scheduling/plain-date.ts`). Une demande dont l'arrivée est inconnue
+  forme son propre groupe, affiché « Date d'arrivée inconnue », sans être écartée.
+- **Écran** : chaque commande affiche « Arrivées de la semaine du … » ; la description de la carte le
+  précise.
+- **Démo** : Bruno Binôme (`a0000000-…-005`) arrive le même jour que Claire avec le même ordinateur,
+  pour que le cas « × 2 » reste visible ; Diego devient une commande « × 1 » à part.
+- **Vérifié** : 6 tests ajoutés (`order-grouping.test.ts`, `plain-date.test.ts`), dont le cas exact
+  Diego/Claire ; `equipment-flow.mjs` vérifie désormais les deux commandes séparées (3 passages sur 3,
+  23 contrôles) ; `cockpit-flow`, `cockpit-a11y` et `equipment-a11y` restent verts.
+- **Dans mes scripts, pas dans le produit** : deux attentes de `equipment-flow.mjs` lisaient la liste
+  avant son rafraîchissement, et le clic « Confirmer la réception » pouvait partir avant l'hydratation
+  du bouton en mode dev. Corrigé en attendant le texte attendu et la fin du chargement.
+- **Limite restante** : la semaine est une règle fixe, pas un réglage par société. Si une filiale
+  voulait une autre fenêtre (par exemple dix jours ouvrés), il faudrait en faire une donnée.
 
 ## Dette laissée derrière
 
