@@ -299,7 +299,7 @@ export async function SatisfactionCard({
                       <div className="mb-1 flex items-center gap-2">
                         <StatusBadge tone="progress" label="Synthèse générée automatiquement" />
                         <span className="text-xs text-text-subtle">
-                          Basée sur {cached.based_on_respondent_count} réponses · agrégée, pas un fait individuel
+                          Basée sur {cached.based_on_respondent_count} répondants · agrégée, pas un fait individuel
                         </span>
                       </div>
                       <p className="text-sm text-text-muted">{cached.summary_text}</p>

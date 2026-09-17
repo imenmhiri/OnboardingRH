@@ -340,8 +340,24 @@ utilisable même si le fournisseur IA est en panne ou mal configuré. Le cockpit
 une mention explicite « Synthèse générée automatiquement » et le nombre de répondants, jamais comme un
 fait individuel, avec le même repli « pas assez de réponses » que la moyenne par site déjà en place.
 
-Variable d'environnement : `ANTHROPIC_API_KEY` (voir `.env.example`) ; absente, la synthèse dégrade
-proprement plutôt que de faire échouer autre chose. Détail complet, preuves de vérification réelle
+**Fournisseur gratuit par défaut : Ollama.** Un modèle ouvert (`qwen2.5:3b`) tourne sur la machine,
+sans compte ni clé, et les commentaires ne quittent jamais l'infrastructure. Anthropic reste
+disponible avec une clé. Le choix se fait par variables d'environnement (voir `.env.example`) :
+`AI_SUMMARY_PROVIDER` (`ollama` ou `anthropic`), `OLLAMA_BASE_URL`, `OLLAMA_MODEL`,
+`ANTHROPIC_API_KEY`. Sans fournisseur joignable, la synthèse échoue proprement sans rien bloquer.
+
+```bash
+docker run -d --name onboarding-ollama -p 11434:11434 -v onboarding-ollama-models:/root/.ollama ollama/ollama
+docker exec onboarding-ollama ollama pull qwen2.5:3b
+```
+
+W3 appelle la synthèse juste après le bilan J+30. Vérifié en local : W3 lancé depuis n8n, deux
+synthèses générées en 32 secondes (site de Lille et société entière, 5 répondants chacune), aucun des
+noms ni de l'email présents dans les commentaires de démonstration (« Marc Manceau », « Kevin
+Dupont », une adresse personnelle) ne figure dans le texte produit.
+
+Le seuil compte des **personnes**, pas des commentaires : les réponses J+7 et J+30 d'une même
+personne ne comptent qu'une fois. Détail complet, preuves de vérification réelle
 (payload exact envoyé au modèle, verbatim de test avec nom hors roster) et dette restante :
 [docs/tickets/T-26-synthese-ia-anonymisee.md](docs/tickets/T-26-synthese-ia-anonymisee.md).
 
@@ -361,9 +377,14 @@ proprement plutôt que de faire échouer autre chose. Détail complet, preuves d
 - **Aucun identifiant Google Calendar réel disponible dans cet environnement** (T-25) : le chemin de
   création/déplacement/annulation d'évènement est vérifié jusqu'à l'appel réseau réel à Google, qui
   répond une erreur d'authentification (jeton factice) — même limite honnête que Resend.
-- **W3 ne couvre pas encore deux étapes du cahier des charges** : il n'appelle pas la synthèse IA
-  (`/api/satisfaction/summarize` existe mais aucun workflow ne la déclenche) et n'envoie aucune
-  alerte RH sur signal faible (les signaux sont visibles dans le cockpit, sans notification).
+- **W3 n'envoie aucune alerte RH sur signal faible** : les signaux sont visibles dans le cockpit,
+  sans notification.
+- **La moyenne par site compte des réponses, pas des personnes** (`domain/surveys/aggregation`) :
+  une même personne répondant à J+7 et J+30 compte deux fois dans le seuil d'anonymat de la moyenne.
+  La synthèse IA, elle, compte bien des personnes.
+- **Le modèle local (`qwen2.5:3b`) est petit** : ses synthèses restent correctes mais simples, et il
+  peut reprendre les marqueurs `[personne]` / `[email]` tels quels. Un modèle plus grand s'installe
+  avec `OLLAMA_MODEL`.
 - **Les invitations des responsables (W1) ne partent pas par email** : les responsables sont bien
   attribués, l'invitation est seulement tracée (`journey.owner_notification_pending`).
 - **Aucun déclencheur produit ne fait encore passer un parcours au statut `cancelled`** : l'annulation
