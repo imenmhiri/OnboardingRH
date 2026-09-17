@@ -1,7 +1,7 @@
 import { Card, CardBody, CardHeader } from '@/components/ui/card';
 import { EmptyState, ErrorState } from '@/components/ui/states';
 import { StatusBadge } from '@/components/ui/status';
-import { parsePlainDate } from '@/domain/scheduling/plain-date';
+import { comparePlainDates, parsePlainDate } from '@/domain/scheduling/plain-date';
 import { buildTaskGraph, explainBlocking, type Blocker } from '@/domain/tasks/task-graph';
 import { isUnassignable, resolveTaskOwner, type AssignmentOutcome } from '@/domain/tasks/owner-resolution';
 import type { OwnerRole, Task, TaskStatus } from '@/domain/tasks/task';
@@ -236,46 +236,65 @@ export async function BlockedTasksCard({ journeys }: { readonly journeys: readon
     }),
   );
 
+  // Une personne, un bloc : son nom une seule fois, ses tâches bloquées dessous.
+  const byJourney = new Map<string, typeof blocked>();
+  for (const entry of blocked) {
+    byJourney.set(entry.task.journeyId, [...(byJourney.get(entry.task.journeyId) ?? []), entry]);
+  }
+  const groups = [...byJourney.entries()]
+    .map(([journeyId, entries]) => ({
+      journeyId,
+      employeeName: journeyById.get(journeyId)?.employee_name ?? 'Parcours inconnu',
+      entries: [...entries].sort((a, b) => comparePlainDates(a.task.dueDate, b.task.dueDate)),
+    }))
+    .sort((a, b) => a.employeeName.localeCompare(b.employeeName, 'fr'));
+
+  const plural = (count: number) => (count > 1 ? 's' : '');
+
   return (
     <Card>
       <CardHeader
         title="Tâches bloquées"
-        description={`${blocked.length} tâche${blocked.length > 1 ? 's' : ''} bloquée${blocked.length > 1 ? 's' : ''}, cause racine et responsable ci-dessous.`}
+        description={`${blocked.length} tâche${plural(blocked.length)} bloquée${plural(blocked.length)} pour ${groups.length} arrivée${plural(groups.length)}, cause racine et responsable ci-dessous.`}
       />
       <CardBody>
         <ul className="space-y-4">
-          {blocked.map(({ task, explanation }) => {
-            const journey = journeyById.get(task.journeyId);
-            return (
-              <li key={task.id} className="rounded-[var(--radius)] border border-border p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wide text-text-subtle">
-                      {journey?.employee_name ?? 'Parcours inconnu'}
-                    </p>
-                    <p className="font-medium text-text">{task.title}</p>
-                  </div>
-                  <StatusBadge tone="danger" label="Bloquée" />
-                </div>
-                <ul className="mt-3 space-y-1.5 border-t border-border pt-3">
-                  {explanation.rootCauses.map((root) => {
-                    const resolved = rootLabels.get(root.taskId);
-                    return (
-                      <li key={root.taskId} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                        <span className="text-text">
-                          Bloquée par : {root.title} — {resolved?.label ?? 'Résolution indisponible'}
-                        </span>
-                        <span className="flex flex-wrap items-center gap-2">
-                          <StatusBadge tone={STATUS_TONE[root.status]} label={STATUS_LABEL[root.status]} />
-                          {resolved?.unassignable ? <StatusBadge tone="danger" label="Non attribuable" /> : null}
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </li>
-            );
-          })}
+          {groups.map((group) => (
+            <li key={group.journeyId} className="rounded-[var(--radius)] border border-border p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-semibold text-text">{group.employeeName}</h3>
+                <span className="text-sm text-text-muted">
+                  {group.entries.length} tâche{plural(group.entries.length)} bloquée{plural(group.entries.length)}
+                </span>
+              </div>
+              <ul className="mt-3 divide-y divide-border border-t border-border">
+                {group.entries.map(({ task, explanation }) => (
+                  <li key={task.id} className="py-3 last:pb-0">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-medium text-text">{task.title}</p>
+                      <StatusBadge tone="danger" label="Bloquée" />
+                    </div>
+                    <ul className="mt-1.5 space-y-1.5">
+                      {explanation.rootCauses.map((root) => {
+                        const resolved = rootLabels.get(root.taskId);
+                        return (
+                          <li key={root.taskId} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                            <span className="text-text-muted">
+                              Bloquée par : {root.title} — {resolved?.label ?? 'Résolution indisponible'}
+                            </span>
+                            <span className="flex flex-wrap items-center gap-2">
+                              <StatusBadge tone={STATUS_TONE[root.status]} label={STATUS_LABEL[root.status]} />
+                              {resolved?.unassignable ? <StatusBadge tone="danger" label="Non attribuable" /> : null}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
         </ul>
       </CardBody>
     </Card>

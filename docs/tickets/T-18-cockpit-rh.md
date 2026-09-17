@@ -164,8 +164,21 @@ n'est pas ce script qui est en cause — c'est l'ordre des commandes. Toutes les
 ce ticket ont été rejouées après un `db:reset` frais, sans `db:verify` intercalé avant les scripts
 Playwright.
 
+## Évolution après livraison : tâches bloquées regroupées par arrivée
+
+Retour de test manuel : le nom de l'arrivant se répétait sur chaque tâche bloquée (« Diego Retardé »
+trois fois). Chaque arrivant a désormais un seul bloc : son nom en titre (`h3`, sous le `h2` de la
+carte), le nombre de tâches bloquées, puis ses tâches triées par échéance, chacune avec sa cause
+racine et son responsable. Le calcul ne change pas (toujours `explainBlocking`), seul l'affichage est
+regroupé. `cockpit-flow.mjs` vérifie que Diego n'est nommé qu'une fois (14 contrôles),
+`cockpit-a11y.mjs` reste vert (10 contrôles).
+
 ## Dette laissée derrière
 
+- Une cause racine sans `owner_id`, résolue vers une personne par la chaîne de repli, s'affiche
+  « Personne assignée » au lieu de son nom : les noms sont chargés avant la résolution, donc la
+  personne trouvée n'y figure pas. Visible sur « Contrat signé » de Claire et Bruno (au lieu de
+  Rachel Renard).
 - Aucune donnée du jeu de démo n'exerce le chemin « tâche réellement non attribuable » (voir la
   décision ci-dessus) ; le code le gère (`isUnassignable`), mais seul un futur scénario de seed
   (société sans chaîne de repli configurée pour un rôle, ou équipe entière absente) le rendrait visible

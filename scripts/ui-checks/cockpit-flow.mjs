@@ -55,6 +55,13 @@ const blockedBody = cardBody(page, 'Tâches bloquées');
 const blockedText = await blockedBody.first().innerText();
 check('Diego apparaît dans les tâches bloquées', includesFold(blockedText, 'Diego'), blockedText.slice(0, 300));
 check(
+  'Diego est nommé une seule fois, ses tâches bloquées regroupées sous son nom',
+  (await blockedBody.first().getByRole('heading', { name: 'Diego Retardé' }).count()) === 1 &&
+    (blockedText.match(/Diego Retardé/g) ?? []).length === 1 &&
+    blockedText.includes('3 tâches bloquées'),
+  blockedText.slice(0, 400),
+);
+check(
   'La cause racine « Créer le compte IT » est explicite avec un responsable',
   /Bloquée par : Créer le compte IT — /.test(blockedText),
   blockedText.slice(0, 400),
