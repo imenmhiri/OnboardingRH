@@ -6,6 +6,8 @@ Plateforme d'intégration multi-sociétés : à partir d'une embauche validée, 
 adapté (société × métier × site), assigne les tâches à la RH, au manager, à l'IT et à l'employé,
 calcule les échéances en jours ouvrés, relance les retards et mesure la satisfaction à J+7 et J+30.
 
+**URL publique** : https://onboarding-rh.vercel.app — comptes de démonstration décrits plus bas.
+
 > **État du projet** — les quatre surfaces produit (créateur de parcours, portail employé, cockpit
 > RH, gestion du matériel) sont construites et reliées au vrai jeu de données, avec une passe
 > d'accessibilité et de cohérence transverse (T-20) une fois les quatre en place. Le périmètre est

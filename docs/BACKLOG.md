@@ -62,7 +62,7 @@ de terminé commune sont dans [WORKFLOW.md](WORKFLOW.md).
 
 | # | Ticket | Couches | Agent | Dépend de | État |
 | --- | --- | --- | --- | --- | --- |
-| T-27 | [Déploiement et URL publique](tickets/T-27-deploiement-url-publique.md) | outillage | — | T-02, T-05 | à faire |
+| T-27 | [Déploiement et URL publique](tickets/T-27-deploiement-url-publique.md) | outillage | — | T-02, T-05 | fait |
 | T-28 | [Documentation et vidéo](tickets/T-28-documentation-et-demonstration.md) | docs | — | T-16 à T-26 | à faire |
 
 ## Cas limites du cahier des charges
