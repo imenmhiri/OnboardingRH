@@ -12,8 +12,9 @@ calcule les échéances en jours ouvrés, relance les retards et mesure la satis
 > RH, gestion du matériel) sont construites et reliées au vrai jeu de données, avec une passe
 > d'accessibilité et de cohérence transverse (T-20) une fois les quatre en place. Le périmètre est
 > découpé en tickets dans [docs/BACKLOG.md](docs/BACKLOG.md), traités un par un selon
-> [docs/WORKFLOW.md](docs/WORKFLOW.md). Le déroulé de la démonstration filmée est dans
-> [docs/SCENARIO-VIDEO.md](docs/SCENARIO-VIDEO.md).
+> [docs/WORKFLOW.md](docs/WORKFLOW.md). Les décisions notables qui traversent plusieurs tickets,
+> avec les alternatives écartées, sont dans [docs/DECISIONS.md](docs/DECISIONS.md). Le déroulé de la
+> démonstration filmée est dans [docs/SCENARIO-VIDEO.md](docs/SCENARIO-VIDEO.md).
 
 ## Installation
 
