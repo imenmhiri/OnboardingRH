@@ -139,6 +139,26 @@ inchangé — ce ticket ne touche aucune règle de domaine), `npm run build`.
 - [x] Les écarts restants sont écrits dans le README plutôt que tus — voir
       [README.md](../../README.md#écarts-daccessibilité-et-de-cohérence-assumés-t-20).
 
+## Correction après livraison : contraste des bordures
+
+Retour utilisateur : les séparations entre cartes, entre le titre et le corps d'une carte, et entre
+les blocs d'une même liste (ex. les arrivées dans « Tâches bloquées ») étaient trop peu visibles.
+Mesure faite : `--border` ne tenait que 1.27:1 à 1.40:1 selon le fond, et `--border-strong` 1.75:1 à
+2.00:1 — très en dessous du minimum WCAG AA de 3:1 pour les limites de composants non textuels. Ce
+n'était pas qu'une question de goût, c'était un vrai défaut d'accessibilité qui n'avait pas été
+détecté par la passe T-20 initiale (le contraste des *bordures*, par opposition au texte, n'était pas
+mesuré).
+
+- **`--border` et `--border-strong`** assombris dans `globals.css`, clair et sombre, chacun revérifié
+  ≥ 3:1 (`border`) et ≥ 4.5:1 (`border-strong`) contre les deux fonds de carte possibles.
+- **Les blocs par personne/arrivée** (tâches bloquées, comptes/matériel avant une arrivée imminente,
+  file de préparation matériel) portent désormais un fond légèrement teinté et une bordure gauche de
+  4px dans la couleur de la société — un repère visuel de plus, pas une information supplémentaire
+  encodée uniquement par la couleur (le nom reste le repère principal).
+- Vérifié : mesure de contraste sur pixels réellement rendus, société Atelier Nord et Méridien Gulf,
+  clair et sombre (`cockpit-a11y.mjs`, `equipment-a11y.mjs`), plus une relecture visuelle par capture
+  d'écran. Aucune régression sur les huit scripts de `scripts/ui-checks/`.
+
 ## Dette laissée derrière
 
 Reprise, sans y ajouter d'élément nouveau propre à ce ticket, dans le README plutôt que dans ce

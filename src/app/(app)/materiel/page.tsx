@@ -260,7 +260,10 @@ function MaterielContent({
           ) : (
             <ul className="space-y-4">
               {journeysWithOpenRequests.map((journey) => (
-                <li key={journey.id} className="rounded-[var(--radius)] border border-border p-4">
+                <li
+                  key={journey.id}
+                  className="rounded-[var(--radius)] border border-border border-l-4 border-l-brand bg-surface-sunken p-4"
+                >
                   <p className="font-medium text-text">
                     {journey.employee_name}{' '}
                     <span className="font-normal text-text-muted">— échéance le {journey.arrival_date}</span>
