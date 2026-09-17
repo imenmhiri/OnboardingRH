@@ -1,7 +1,8 @@
 /**
  * Éprouve la gestion du matériel (T-19) sur la vraie base et le vrai
  * navigateur : file de préparation groupée par arrivée, commande groupée pour
- * un même modèle demandé par deux arrivées le même jour, attribution d'une
+ * un même modèle demandé par deux arrivées de la même semaine (et séparée
+ * pour une arrivée d'une autre semaine), attribution d'une
  * unité identifiée, remise, reprise avant l'arrivée, nouvelle demande, et
  * l'accusé de réception depuis le portail employé. Termine par la garde
  * d'accès par rôle, garantie par la RLS et rejouée ici côté écran.
@@ -56,12 +57,19 @@ await page.waitForURL((url) => url.pathname === '/materiel', { timeout: 10000 })
 check('L’IT atterrit directement sur la file de matériel', page.url() === `${BASE}/materiel`, page.url());
 check('Le titre de l’écran matériel est affiché', (await page.locator('h1', { hasText: 'Matériel' }).count()) === 1);
 
-// Commandes à grouper : Claire et Diego demandent le même ordinateur le même
-// jour, regroupés en une seule commande.
+// Commandes à grouper : Claire et Bruno demandent le même ordinateur le même
+// jour, regroupés en une seule commande ; Diego, arrivé une autre semaine,
+// reste une commande à part.
 const groupsBody = cardBody(page, 'Commandes à grouper');
-const groupsText = await groupsBody.first().innerText();
-check('Le modèle partagé par Claire et Diego apparaît groupé', includesFold(groupsText, 'Ordinateur portable standard') && groupsText.includes('× 2'), groupsText.slice(0, 300));
-check('Les deux arrivées concernées sont nommées', includesFold(groupsText, 'Claire') && includesFold(groupsText, 'Diego'), groupsText.slice(0, 300));
+const laptopGroup = (...names) => {
+  let group = groupsBody.locator('li').filter({ hasText: 'Ordinateur portable standard' });
+  for (const name of names) group = group.filter({ hasText: name });
+  return group;
+};
+const sameWeekGroupText = await laptopGroup('Claire', 'Bruno').first().innerText();
+check('Claire et Bruno, arrivés le même jour, partagent une seule commande', sameWeekGroupText.includes('× 2') && includesFold(sameWeekGroupText, 'semaine du'), sameWeekGroupText);
+const diegoGroupText = await laptopGroup('Diego').first().innerText();
+check('Diego, arrivé une autre semaine, reste une commande à part', diegoGroupText.includes('× 1') && !includesFold(diegoGroupText, 'Claire'), diegoGroupText);
 
 // File de préparation, par arrivée : Diego apparaît avec son badge remis, non accusé.
 const queueBody = cardBody(page, 'File de préparation, par arrivée');
@@ -69,11 +77,10 @@ const queueText = await queueBody.first().innerText();
 check('Diego apparaît dans la file, groupé par arrivée', includesFold(queueText, 'Diego'), queueText.slice(0, 300));
 check('Le badge remis de Diego signale l’attente d’un accusé, en texte', queueText.includes('Remis') && includesFold(queueText, 'attente de l’accusé de réception'), queueText.slice(0, 400));
 
-// --- Commander le groupe (Claire + Diego, ordinateur standard). ---
-const orderButton = page.locator('li', { hasText: 'Ordinateur portable standard' }).getByRole('button', { name: 'Marquer commandé' });
-await submitAndWait(page, orderButton);
-const groupsAfterOrder = await cardBody(page, 'Commandes à grouper').first().innerText();
-check('Le groupe commandé disparaît des commandes à grouper', !includesFold(groupsAfterOrder, 'Ordinateur portable standard'), groupsAfterOrder.slice(0, 300));
+// --- Commander le groupe de la semaine (Claire + Bruno), sans toucher Diego. ---
+await submitAndWait(page, laptopGroup('Claire', 'Bruno').getByRole('button', { name: 'Marquer commandé' }));
+check('Le groupe commandé disparaît des commandes à grouper', (await laptopGroup('Claire').count()) === 0);
+check('La commande de Diego, d’une autre semaine, reste à passer', (await laptopGroup('Diego').count()) === 1);
 const queueAfterOrder = await cardBody(page, 'File de préparation, par arrivée').first().innerText();
 check('Les deux ordinateurs commandés apparaissent « Commandé »', (queueAfterOrder.match(/Commandé/g) ?? []).length >= 2, queueAfterOrder.slice(0, 500));
 
@@ -91,18 +98,24 @@ const assignError = await assignDialog.locator('[role="alert"]').count();
 check('L’attribution ne renvoie pas d’erreur', assignError === 0);
 await page.keyboard.press('Escape');
 await assignDialog.waitFor({ state: 'hidden', timeout: 5000 });
-const queueAfterAssign = await cardBody(page, 'File de préparation, par arrivée').first().innerText();
+// La liste se rafraichit apres la fermeture : on attend le numero plutot que
+// de lire un etat qui n'est peut-etre pas encore rendu.
+const queueCard = cardBody(page, 'File de préparation, par arrivée').first();
+await queueCard.getByText('SN-VERIF-001').waitFor({ timeout: 10000 }).catch(() => {});
+const queueAfterAssign = await queueCard.innerText();
 check('L’unité attribuée à Claire porte son numéro de série', queueAfterAssign.includes('SN-VERIF-001') && includesFold(queueAfterAssign, 'Attribué'), queueAfterAssign.slice(0, 600));
 
 // --- Reprendre l’attribution avant l’arrivée (cas limite du ticket). ---
 const claireAssignedRow = page.locator('li', { hasText: 'SN-VERIF-001' }).first();
 await submitAndWait(page, claireAssignedRow.getByRole('button', { name: 'Reprendre l’attribution' }));
-const groupsAfterReclaim = await cardBody(page, 'Commandes à grouper').first().innerText();
-check('Une unité reprise avant l’arrivée redevient à commander', includesFold(groupsAfterReclaim, 'Ordinateur portable standard'), groupsAfterReclaim.slice(0, 300));
+await queueCard.getByText('SN-VERIF-001').waitFor({ state: 'detached', timeout: 10000 }).catch(() => {});
+await laptopGroup('Claire').first().waitFor({ timeout: 10000 }).catch(() => {});
+check('Une unité reprise avant l’arrivée redevient à commander', (await laptopGroup('Claire').count()) === 1);
 const queueAfterReclaim = await cardBody(page, 'File de préparation, par arrivée').first().innerText();
 check('Le numéro de série repris ne s’affiche plus', !queueAfterReclaim.includes('SN-VERIF-001'), queueAfterReclaim.slice(0, 600));
 
-// --- Remettre l’ordinateur de Diego, deja commande a l’etape groupee. ---
+// --- Commander puis remettre l’ordinateur de Diego, sa propre commande. ---
+await submitAndWait(page, laptopGroup('Diego').getByRole('button', { name: 'Marquer commandé' }));
 const diegoLaptopRow = page.locator('li', { hasText: 'Diego' }).filter({ has: page.locator('text=Ordinateur portable standard') });
 await diegoLaptopRow.getByRole('button', { name: 'Attribuer' }).click();
 const secondAssignDialog = page.getByRole('dialog', { name: 'Attribuer une unité' });
@@ -172,8 +185,11 @@ const equipmentCard = cardBody(ackPage, 'Mon matériel');
 const equipmentText = await equipmentCard.first().innerText();
 check('Le casque remis à Alice attend sa confirmation', includesFold(equipmentText, 'Casque audio'), equipmentText.slice(0, 300));
 
+// En mode dev, un clic avant l'hydratation du bouton client ne fait rien :
+// on attend que la page ait fini de charger ses scripts.
+await ackPage.waitForLoadState('networkidle');
 await equipmentCard.getByRole('button', { name: /Confirmer la réception/ }).click();
-await ackPage.getByText('Réception confirmée').first().waitFor({ timeout: 8000 });
+await ackPage.getByText('Réception confirmée').first().waitFor({ timeout: 15000 });
 check('La confirmation de réception s’affiche sans rechargement de page', true);
 
 await ackPage.reload({ waitUntil: 'networkidle' });

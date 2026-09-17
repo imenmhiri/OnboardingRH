@@ -299,12 +299,13 @@ async function main(): Promise<void> {
     }
   }
   const itemNames = new Map(eqRows.map((r) => [r.catalog_item_id, r.name]));
-  console.log('\nCommandes à passer (demandes regroupées par modèle) :');
-  for (const g of groupRequestsForOrder(requests)) {
+  console.log('\nCommandes à passer (demandes regroupées par modèle et par semaine d’arrivée) :');
+  const arrivalByJourney = new Map(journeys.map((j) => [j.id, parsePlainDate(j.arrival_date)]));
+  for (const g of groupRequestsForOrder(requests, arrivalByJourney)) {
     const people = g.journeyIds.map((id) => journeys.find((j) => j.id === id)?.employee_name ?? id).join(', ');
-    console.log(`  ${String(g.quantity).padStart(2)} × ${(itemNames.get(g.catalogItemId) ?? g.catalogItemId).padEnd(30)} pour : ${people}`);
+    console.log(`  ${String(g.quantity).padStart(2)} × ${(itemNames.get(g.catalogItemId) ?? g.catalogItemId).padEnd(30)} semaine du ${g.arrivalWeekStart ?? '?'}  pour : ${people}`);
   }
-  note('Deux arrivées demandant le même modèle donnent une seule commande, jamais deux.');
+  note('Deux arrivées de la même semaine demandant le même modèle donnent une seule commande ; des semaines différentes, deux commandes.');
 
   const reclaim = await q<{ payload: { reason?: string } }>("select payload from public.audit_events where action = 'equipment.reclaimed' limit 1");
   if (reclaim[0]) note(`Matériel attribué puis repris, raison tracée : « ${reclaim[0].payload.reason ?? ''} »`);

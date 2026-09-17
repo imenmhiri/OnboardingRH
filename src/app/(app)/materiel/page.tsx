@@ -12,7 +12,9 @@ import { StatusBadge, type StatusTone } from '@/components/ui/status';
 import { canAccess } from '@/domain/companies/access';
 import { groupRequestsForOrder } from '@/domain/equipment/order-grouping';
 import type { EquipmentRequest, EquipmentStatus } from '@/domain/equipment/equipment';
+import { parsePlainDate } from '@/domain/scheduling/plain-date';
 import { createSupabaseServerClient } from '@/infrastructure/supabase/server-client';
+import { formatDayMonth } from '@/lib/format-date';
 import { currentSession } from '@/lib/session';
 
 export const metadata = { title: 'Matériel — OnboardingRH' };
@@ -178,7 +180,10 @@ function MaterielContent({
     status: row.status,
   }));
 
-  const orderGroups = groupRequestsForOrder(domainRequests).map((group) => ({
+  const arrivalDateByJourneyId = new Map(
+    journeys.map((journey) => [journey.id, parsePlainDate(journey.arrival_date)]),
+  );
+  const orderGroups = groupRequestsForOrder(domainRequests, arrivalDateByJourneyId).map((group) => ({
     ...group,
     catalogName: catalogNameById.get(group.catalogItemId) ?? 'Matériel',
     employeeNames: group.journeyIds.map((id) => journeyById.get(id)?.employee_name).filter((name): name is string => Boolean(name)),
@@ -201,7 +206,7 @@ function MaterielContent({
       <Card>
         <CardHeader
           title="Commandes à grouper"
-          description="Même modèle demandé pour plusieurs arrivées : une seule commande à passer."
+          description="Même modèle demandé pour plusieurs arrivées de la même semaine : une seule commande à passer."
         />
         <CardBody>
           {orderGroups.length === 0 ? (
@@ -213,12 +218,17 @@ function MaterielContent({
             <ul className="space-y-3">
               {orderGroups.map((group) => (
                 <li
-                  key={`${group.catalogItemId}`}
+                  key={`${group.catalogItemId}:${group.arrivalWeekStart ?? 'unknown'}`}
                   className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius)] border border-border p-4"
                 >
                   <div>
                     <p className="font-medium text-text">
                       {group.catalogName} <span className="font-normal text-text-muted">× {group.quantity}</span>
+                    </p>
+                    <p className="text-sm text-text-muted">
+                      {group.arrivalWeekStart
+                        ? `Arrivées de la semaine du ${formatDayMonth(group.arrivalWeekStart)}`
+                        : 'Date d’arrivée inconnue'}
                     </p>
                     <p className="text-sm text-text-muted">
                       Pour {group.employeeNames.join(', ') || 'des arrivées à préciser'}

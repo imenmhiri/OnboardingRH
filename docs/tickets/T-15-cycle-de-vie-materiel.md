@@ -44,7 +44,8 @@ décide *quoi*.
   comme telle (cinq tests) ; vérifié sur le badge de Diego dans le parcours bloqué.
 - **Même modèle commandé pour plusieurs arrivées simultanées** : regroupement en une commande unique,
   jamais entre deux sociétés (cinq tests) ; vérifié sur les ordinateurs de Claire et Diego, groupés en
-  une commande de deux.
+  une commande de deux. *Corrigé depuis : ce regroupement ignorait la date d'arrivée ; il se fait
+  désormais par semaine d'arrivée (voir T-19, « Correction après livraison »).*
 
 ## Définition de terminé
 

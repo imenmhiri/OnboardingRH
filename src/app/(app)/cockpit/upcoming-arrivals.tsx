@@ -3,11 +3,11 @@ import { EmptyState } from '@/components/ui/states';
 import {
   addCalendarDays,
   comparePlainDates,
+  mondayOf,
   parsePlainDate,
-  weekdayOf,
-  WEEKDAYS,
   type PlainDate,
 } from '@/domain/scheduling/plain-date';
+import { formatDayMonth as formatFrenchDate } from '@/lib/format-date';
 import type { JourneyRow } from './types';
 
 /**
@@ -15,23 +15,6 @@ import type { JourneyRow } from './types';
  * encore rien d'actionnable pour la RH — elle apparaîtra ici à l'approche.
  */
 const WEEK_WINDOW_DAYS = 28;
-
-function mondayOf(date: PlainDate): PlainDate {
-  const index = WEEKDAYS.indexOf(weekdayOf(date));
-  // Décalage jusqu'au lundi précédent (ou le jour même s'il l'est déjà).
-  const diffFromMonday = (index + 6) % 7;
-  return addCalendarDays(date, -diffFromMonday);
-}
-
-function formatFrenchDate(date: PlainDate): string {
-  const parts = date.split('-').map(Number);
-  const year = parts[0] ?? 1970;
-  const month = parts[1] ?? 1;
-  const day = parts[2] ?? 1;
-  return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' }).format(
-    new Date(Date.UTC(year, month - 1, day)),
-  );
-}
 
 export function UpcomingArrivalsCard({
   journeys,

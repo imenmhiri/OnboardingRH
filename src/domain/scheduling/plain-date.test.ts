@@ -5,6 +5,7 @@ import {
   differenceInCalendarDays,
   fromEpochDay,
   isValidPlainDate,
+  mondayOf,
   parsePlainDate,
   toEpochDay,
   weekdayOf,
@@ -71,5 +72,21 @@ describe('arithmetique calendaire', () => {
     expect(differenceInCalendarDays(to, from)).toBe(-7);
     expect(comparePlainDates(from, to)).toBeLessThan(0);
     expect(comparePlainDates(from, from)).toBe(0);
+  });
+});
+
+describe('mondayOf', () => {
+  it('renvoie le lundi de la semaine, ou la date elle-meme si c est un lundi', () => {
+    expect(mondayOf(parsePlainDate('2026-09-28'))).toBe('2026-09-28');
+    expect(mondayOf(parsePlainDate('2026-10-01'))).toBe('2026-09-28');
+  });
+
+  it('rattache le dimanche a la semaine qui se termine, pas a la suivante', () => {
+    expect(mondayOf(parsePlainDate('2026-10-04'))).toBe('2026-09-28');
+  });
+
+  it('franchit un changement de mois', () => {
+    expect(mondayOf(parsePlainDate('2026-10-02'))).toBe('2026-09-28');
+    expect(mondayOf(parsePlainDate('2026-03-01'))).toBe('2026-02-23');
   });
 });

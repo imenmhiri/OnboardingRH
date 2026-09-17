@@ -167,6 +167,9 @@ declare
   j_progress constant uuid := 'a0000000-0000-4000-8000-000000000002'; -- en cours
   j_blocked  constant uuid := 'a0000000-0000-4000-8000-000000000003'; -- bloqué
   j_done     constant uuid := 'a0000000-0000-4000-8000-000000000004'; -- terminé
+  -- Arrive le même jour que Claire, avec le même ordinateur à commander : le
+  -- cas « même matériel pour plusieurs arrivées simultanées ».
+  j_same_day constant uuid := 'a0000000-0000-4000-8000-000000000005';
 begin
   -- Les deux comptes employés de démonstration portent chacun un parcours, à un
   -- stade différent : sans cela, se connecter en tant qu'employé ne montrerait
@@ -177,7 +180,8 @@ begin
     (j_upcoming, nord, site_lille, template, claire_id, 'Claire Collègue', 'atelier', 'cdi', manager_id, current_date + 10, 'scheduled'),
     (j_progress, nord, site_lille, template, alice_id, 'Alice Arrivante', 'atelier', 'cdi', manager_id, current_date - 3, 'in_progress'),
     (j_blocked, nord, site_lille, template, null, 'Diego Retardé', 'atelier', 'cdi', manager_id, current_date - 8, 'in_progress'),
-    (j_done, nord, site_lille, template, null, 'Farida Fin', 'atelier', 'cdi', manager_id, current_date - 45, 'completed');
+    (j_done, nord, site_lille, template, null, 'Farida Fin', 'atelier', 'cdi', manager_id, current_date - 45, 'completed'),
+    (j_same_day, nord, site_lille, template, null, 'Bruno Binôme', 'atelier', 'cdi', manager_id, current_date + 10, 'scheduled');
 
   -- --- Parcours à venir : toutes les tâches sont encore devant nous. ---
   insert into public.tasks (id, company_id, journey_id, template_key, title, owner_role, owner_id, due_on, offset_working_days, status, expected_document, shared_key)
@@ -188,6 +192,16 @@ begin
     ('b1000000-0000-4000-8000-000000000004', nord, j_upcoming, 'workstation', 'Préparer le poste de travail', 'it', null, current_date + 9, -1, 'pending', null, null),
     ('b1000000-0000-4000-8000-000000000005', nord, j_upcoming, 'welcome', 'Accueil et remise du matériel', 'manager', manager_id, current_date + 10, 0, 'pending', 'accuse-reception', null),
     ('b1000000-0000-4000-8000-000000000006', nord, j_upcoming, 'week-one-review', 'Point de fin de première semaine', 'manager', manager_id, current_date + 17, 5, 'pending', null, null);
+
+  -- --- Parcours à venir, même jour que Claire. ---
+  insert into public.tasks (id, company_id, journey_id, template_key, title, owner_role, owner_id, due_on, offset_working_days, status, expected_document, shared_key)
+  values
+    ('b5000000-0000-4000-8000-000000000001', nord, j_same_day, 'contract', 'Contrat signé', 'hr_admin', null, current_date + 5, -5, 'pending', 'contrat-signe', null),
+    ('b5000000-0000-4000-8000-000000000002', nord, j_same_day, 'it-account', 'Créer le compte IT', 'it', null, current_date + 8, -2, 'pending', null, null),
+    ('b5000000-0000-4000-8000-000000000003', nord, j_same_day, 'badge', 'Commander le badge d''accès', 'it', null, current_date + 8, -2, 'pending', null, 'badge-atelier-nord'),
+    ('b5000000-0000-4000-8000-000000000004', nord, j_same_day, 'workstation', 'Préparer le poste de travail', 'it', null, current_date + 9, -1, 'pending', null, null),
+    ('b5000000-0000-4000-8000-000000000005', nord, j_same_day, 'welcome', 'Accueil et remise du matériel', 'manager', manager_id, current_date + 10, 0, 'pending', 'accuse-reception', null),
+    ('b5000000-0000-4000-8000-000000000006', nord, j_same_day, 'week-one-review', 'Point de fin de première semaine', 'manager', manager_id, current_date + 17, 5, 'pending', null, null);
 
   -- --- Parcours en cours : arrivée passée, premières tâches soldées. ---
   insert into public.tasks (id, company_id, journey_id, template_key, title, owner_role, owner_id, due_on, offset_working_days, status, expected_document, shared_key, completed_at)
@@ -246,7 +260,14 @@ begin
     ('b4000000-0000-4000-8000-000000000004', 'b4000000-0000-4000-8000-000000000002'),
     ('b4000000-0000-4000-8000-000000000005', 'b4000000-0000-4000-8000-000000000004'),
     ('b4000000-0000-4000-8000-000000000005', 'b4000000-0000-4000-8000-000000000003'),
-    ('b4000000-0000-4000-8000-000000000006', 'b4000000-0000-4000-8000-000000000005');
+    ('b4000000-0000-4000-8000-000000000006', 'b4000000-0000-4000-8000-000000000005'),
+
+    ('b5000000-0000-4000-8000-000000000002', 'b5000000-0000-4000-8000-000000000001'),
+    ('b5000000-0000-4000-8000-000000000003', 'b5000000-0000-4000-8000-000000000001'),
+    ('b5000000-0000-4000-8000-000000000004', 'b5000000-0000-4000-8000-000000000002'),
+    ('b5000000-0000-4000-8000-000000000005', 'b5000000-0000-4000-8000-000000000004'),
+    ('b5000000-0000-4000-8000-000000000005', 'b5000000-0000-4000-8000-000000000003'),
+    ('b5000000-0000-4000-8000-000000000006', 'b5000000-0000-4000-8000-000000000005');
 end $$;
 
 -- ============================================================================
@@ -378,12 +399,14 @@ values
   ('f3000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000003', 'b3000000-0000-4000-8000-000000000005', 'f2000000-0000-4000-8000-000000000002', 'handed_over'),
   ('f3000000-0000-4000-8000-000000000005', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000003', null, 'f2000000-0000-4000-8000-000000000001', 'requested'),
 
-  -- Claire (à venir) : un ordinateur encore à commander — avec celui de Diego,
-  -- deux demandes du même modèle en attente, à regrouper en une commande. Son
-  -- badge, lui, avait été attribué puis repris quand son arrivée avait glissé ;
-  -- il attend une nouvelle affectation.
+  -- Claire et Bruno (à venir, même jour) : le même ordinateur à commander,
+  -- regroupé en une seule commande. Celui de Diego, déjà arrivé, reste une
+  -- commande à part : une autre semaine, une autre urgence. Le badge de
+  -- Claire, lui, avait été attribué puis repris quand son arrivée avait
+  -- glissé ; il attend une nouvelle affectation.
   ('f3000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', null, 'f2000000-0000-4000-8000-000000000001', 'requested'),
-  ('f3000000-0000-4000-8000-000000000007', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', null, 'f2000000-0000-4000-8000-000000000002', 'requested');
+  ('f3000000-0000-4000-8000-000000000007', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', null, 'f2000000-0000-4000-8000-000000000002', 'requested'),
+  ('f3000000-0000-4000-8000-000000000009', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000005', null, 'f2000000-0000-4000-8000-000000000001', 'requested');
 
 -- Un casque remis à Alice (parcours en cours, compte actif) mais jamais
 -- accusé : le cas de démonstration « accusé de réception en attente » que
