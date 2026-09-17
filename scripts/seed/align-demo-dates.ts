@@ -48,7 +48,12 @@ function parseWeekdays(value: string | null): Weekday[] | null {
 }
 
 async function main(): Promise<void> {
-  const db = new pg.Client({ host: '127.0.0.1', port: 54322, user: 'postgres', password: 'postgres', database: 'postgres' });
+  // DATABASE_URL surcharge la connexion locale par defaut, pour rejouer ce
+  // script une fois contre une base de production (deploiement, T-27) sans
+  // changer le comportement de `npm run db:reset`.
+  const db = process.env.DATABASE_URL
+    ? new pg.Client({ connectionString: process.env.DATABASE_URL })
+    : new pg.Client({ host: '127.0.0.1', port: 54322, user: 'postgres', password: 'postgres', database: 'postgres' });
   await db.connect();
 
   const today = parsePlainDate((await db.query<{ today: string }>('select current_date::text as today')).rows[0]!.today);

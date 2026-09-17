@@ -13,7 +13,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'node:fs';
 
-const env = Object.fromEntries(
+// Les variables du process (utiles pour rejouer ce script une fois contre une
+// base de production, T-27) completent celles de .env.local sans les ecraser.
+const fileEnv = Object.fromEntries(
   readFileSync('.env.local', 'utf8')
     .split(/\r?\n/)
     .filter((line) => line && !line.startsWith('#'))
@@ -22,6 +24,7 @@ const env = Object.fromEntries(
       return [line.slice(0, index), line.slice(index + 1)];
     }),
 );
+const env = { ...fileEnv, ...process.env };
 
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL ?? '', env.SUPABASE_SERVICE_ROLE_KEY ?? '', {
   auth: { autoRefreshToken: false, persistSession: false },
