@@ -187,10 +187,13 @@ function createUnconfiguredCalendar(missing: readonly string[]): Calendar {
 
 /**
  * Lit les identifiants depuis l'environnement — jamais en dur dans le dépôt.
- * Contrairement à `createResendMailerFromEnv` (T-24), une variable manquante
- * ne fait pas échouer tôt l'appelant : elle renvoie un calendrier de repli qui
- * échoue proprement à chaque appel, tracé comme n'importe quelle panne du
- * fournisseur. La création du parcours (W1) ne dépend jamais de l'agenda.
+ * Une variable manquante ne fait pas échouer tôt l'appelant : elle renvoie un
+ * calendrier de repli qui échoue proprement à chaque appel, tracé comme
+ * n'importe quelle panne du fournisseur. La création du parcours (W1) ne
+ * dépend jamais de l'agenda. `createResendMailerFromEnv` (T-24) suivait à
+ * l'origine une règle différente (échec immédiat) ; l'incohérence a provoqué
+ * un vrai 500 en production (T-27, W2/W3 sans clé Resend) et a été corrigée
+ * pour suivre exactement cette même discipline.
  */
 export function createGoogleCalendarFromEnv(): Calendar {
   const clientId = process.env['GOOGLE_CALENDAR_CLIENT_ID'];

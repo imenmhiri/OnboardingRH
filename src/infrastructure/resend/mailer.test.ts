@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { createResendMailer, type ResendLikeClient } from './mailer';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createResendMailer, createResendMailerFromEnv, type ResendLikeClient } from './mailer';
 
 type SendReturn = ReturnType<ResendLikeClient['emails']['send']>;
 
@@ -86,4 +86,42 @@ describe('createResendMailer', () => {
 
     expect(result).toEqual({ ok: false, reason: 'provider_error', detail: 'fetch failed' });
   });
+});
+
+describe('createResendMailerFromEnv', () => {
+  const ENV_KEYS = ['RESEND_API_KEY', 'RESEND_FROM'] as const;
+  const saved: Record<string, string | undefined> = {};
+
+  beforeEach(() => {
+    for (const key of ENV_KEYS) {
+      saved[key] = process.env[key];
+      delete process.env[key];
+    }
+  });
+
+  afterEach(() => {
+    for (const key of ENV_KEYS) {
+      if (saved[key] !== undefined) process.env[key] = saved[key];
+      else delete process.env[key];
+    }
+  });
+
+  it(
+    'defaut reel constate en production (T-27) : sans RESEND_API_KEY/RESEND_FROM, ' +
+      'la fabrique lancait une exception non attrapee — un webhook comme W2/W3 renvoyait ' +
+      '500 au lieu d un JSON avec une erreur typee. Elle degrade desormais proprement, ' +
+      'meme discipline que createUnconfiguredCalendar (T-25)',
+    async () => {
+      const mailer = createResendMailerFromEnv();
+      const result = await mailer.send({
+        to: { email: 'alice@perso.example' },
+        subject: 'Bienvenue',
+        html: '<p>Bienvenue</p>',
+        text: 'Bienvenue',
+      });
+      expect(result.ok).toBe(false);
+      expect(result.ok === false && result.reason).toBe('provider_error');
+      expect(result.ok === false && result.detail).toContain('RESEND_API_KEY');
+    },
+  );
 });
