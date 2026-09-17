@@ -211,7 +211,9 @@ HTTP Request du workflow exécute une fois câblé à une vraie instance.
   T-24, l'envoi réel de relance/escalade est vérifié jusqu'à l'appel réseau réel (rejeté pour
   authentification), pas jusqu'à la réception effective d'un email.
 - **`workflows/w2-critical-delay.json` n'a jamais tourné dans une vraie instance n8n**, même
-  contrainte réseau que W1/T-24.
+  contrainte réseau que W1/T-24. *Levé depuis : exécuté dans une vraie instance n8n 2.39.7 via un
+  déclencheur manuel ajouté à côté du déclencheur planifié ; l'escalade de Diego vers la RH est
+  tracée avec `origin: w2-critical-delay`.*
 - **`lastReminderDates` compare des dates en UTC** (`created_at` tronqué aux 10 premiers caractères) à
   un `today` résolu dans le fuseau de la société. Un passage exécuté à quelques minutes de minuit UTC
   pourrait, dans un cas limite non rencontré sur les données de démonstration, considérer une relance

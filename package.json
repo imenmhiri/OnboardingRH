@@ -16,6 +16,7 @@
     "db:reset": "supabase db reset && tsx scripts/seed/align-demo-dates.ts && tsx scripts/seed/seed-portal-document.ts",
     "db:check-dates": "tsx scripts/seed/align-demo-dates.ts --check",
     "demo:report": "tsx scripts/demo/report.ts",
+    "n8n:local": "bash scripts/n8n/start-local.sh",
     "db:diff": "supabase db diff",
     "db:push": "supabase db push",
     "db:verify": "node supabase/tests/rls-isolation.mjs && node supabase/tests/journeys-isolation.mjs && node supabase/tests/storage-isolation.mjs && node supabase/tests/equipment-isolation.mjs && node supabase/tests/calendar-events-isolation.mjs && node supabase/tests/ai-satisfaction-summaries-isolation.mjs"

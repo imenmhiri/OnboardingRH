@@ -206,5 +206,11 @@ Request du workflow exécute une fois câblé à une vraie instance.
   réseau stable dans cet environnement pour l'installer. À ré-vérifier avec une vraie instance dès
   qu'un environnement avec accès réseau complet est disponible — la structure du JSON est prête pour
   ça (crédentiels référencés par nom, aucun secret en clair).
+  *Levé depuis : exécuté dans une vraie instance n8n 2.39.7 (Docker, `scripts/n8n/start-local.sh`).
+  L'exécution réelle a révélé trois défauts du JSON, corrigés : `personalEmail` n'était pas transmis
+  à l'application ; une expression `$('Envoyer l'email…')` cassait sur l'apostrophe ; et le nœud
+  d'attente passait avant la réponse au webhook, laissant l'appelant bloqué jusqu'à la date d'envoi.
+  Les quatre branches ont tourné (créé → réponse → attente → email → alerte, doublon, échec
+  explicite). Voir README, « Lancer n8n en local ».*
 - **W2 (retard critique) et W3 (bilan J+30) ne sont pas construits** — hors périmètre de ce ticket,
   prochains de la série.

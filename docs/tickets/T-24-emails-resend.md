@@ -238,7 +238,8 @@ arrive réellement dans une boîte de réception, faute de clé Resend réelle d
   des tâches (tâche assignée) — hors périmètre de ce ticket, mentionné dans le README.
 - **`workflows/w1-validated-hire.json` n'a jamais tourné dans une vraie instance n8n**, même
   contrainte réseau que T-21. La branche différée ajoutée par ce ticket suit le même schéma
-  d'export que le reste du fichier.
+  d'export que le reste du fichier. *Levé depuis : la branche différée a tourné dans une vraie
+  instance n8n (voir T-21) ; elle a dû être déplacée après la réponse au webhook.*
 - **Cockpit RH pour les échecs d'envoi** : `email.delivery_failed` et `email.no_channel_available`
   sont tracés et interrogeables, mais aucune surface cockpit dédiée ne les affiche encore — pas dans
   le périmètre de ce ticket (infrastructure/application uniquement).
