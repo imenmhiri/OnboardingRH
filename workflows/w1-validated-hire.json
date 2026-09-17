@@ -42,7 +42,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  companyId: $json.body.companyId,\n  siteId: $json.body.siteId,\n  jobFamily: $json.body.jobFamily,\n  contractType: $json.body.contractType,\n  employeeName: $json.body.employeeName,\n  employeeId: $json.body.employeeId ?? null,\n  managerId: $json.body.managerId ?? null,\n  arrivalDate: $json.body.arrivalDate,\n  hireReference: $json.body.hireReference\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  companyId: $json.body.companyId,\n  siteId: $json.body.siteId,\n  jobFamily: $json.body.jobFamily,\n  contractType: $json.body.contractType,\n  employeeName: $json.body.employeeName,\n  employeeId: $json.body.employeeId ?? null,\n  managerId: $json.body.managerId ?? null,\n  arrivalDate: $json.body.arrivalDate,\n  hireReference: $json.body.hireReference,\n  personalEmail: $json.body.personalEmail ?? null\n}) }}",
         "options": {
           "response": {
             "response": {
@@ -163,26 +163,44 @@
     },
     {
       "parameters": {
-        "respondWith": "allIncomingItems",
-        "options": {}
+        "respondWith": "json",
+        "responseBody": "={{ $(\"Appeler l'application — Créer le parcours\").item.json.body }}",
+        "options": {
+          "responseCode": "={{ $(\"Appeler l'application — Créer le parcours\").item.json.statusCode }}"
+        }
       },
       "id": "1f2b1a10-0007-4a11-8a11-000000000007",
       "name": "Répondre au webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.3,
-      "position": [860, 260]
+      "position": [860, 330]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $(\"Appeler l'application — Créer le parcours\").item.json.body }}",
+        "options": {
+          "responseCode": "={{ $(\"Appeler l'application — Créer le parcours\").item.json.statusCode }}"
+        }
+      },
+      "id": "1f2b1a10-0012-4a11-8a11-000000000012",
+      "name": "Répondre au webhook — parcours créé",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [860, 140],
+      "notes": "Répond avant l'attente : un noeud Wait suspend l'exécution, et un appelant qui attend encore la réponse resterait bloqué jusqu'à la date d'envoi."
     },
     {
       "parameters": {
         "resume": "specificTime",
-        "dateTime": "={{ $json.body.sendWelcomeEmailAt }}T08:00:00"
+        "dateTime": "={{ $(\"Appeler l'application — Créer le parcours\").item.json.body.sendWelcomeEmailAt }}T08:00:00"
       },
       "id": "1f2b1a10-0008-4a11-8a11-000000000008",
       "name": "Attendre la date d'envoi (T-24)",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [600, 40],
-      "notes": "La date vient de src/domain/scheduling/due-date.ts (resolveWelcomeEmailSendDate), renvoyee par POST /api/hires/validated — aucun calcul de date dans n8n. Ce noeud n'attend pas la reponse HTTP deja envoyee sur la branche parallele 'Répondre au webhook' : les deux branches partent du meme embranchement 'Créé' et s'executent independamment."
+      "position": [1100, 140],
+      "notes": "La date vient de src/domain/scheduling/due-date.ts (resolveWelcomeEmailSendDate), renvoyee par POST /api/hires/validated — aucun calcul de date dans n8n. Placé après la réponse au webhook : l'appelant a déjà sa réponse quand l'exécution se suspend."
     },
     {
       "parameters": {
@@ -203,7 +221,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  companyId: $('Webhook — Embauche validée').item.json.body.companyId,\n  journeyId: $json.body.journeyId\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  companyId: $('Webhook — Embauche validée').item.json.body.companyId,\n  journeyId: $(\"Appeler l'application — Créer le parcours\").item.json.body.journeyId\n}) }}",
         "options": {
           "response": {
             "response": {
@@ -217,7 +235,7 @@
       "name": "Envoyer l'email de bienvenue (T-24)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [860, 40],
+      "position": [1340, 140],
       "notes": "Aucune donnee personnelle dans ce corps : seulement des identifiants. Le nom et l'adresse du destinataire sont relus par l'application au moment de l'envoi (src/application/use-cases/send-welcome-email.ts), avec bascule tracee vers le canal alternatif si l'employe n'a pas d'email personnel."
     },
     {
@@ -247,7 +265,7 @@
       "name": "Vérifier l'envoi",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
-      "position": [1100, 40]
+      "position": [1580, 140]
     },
     {
       "parameters": {
@@ -256,7 +274,7 @@
             {
               "name": "alerte",
               "type": "string",
-              "value": "=Email de bienvenue non envoyé pour le parcours {{ $('Envoyer l'email de bienvenue (T-24)').item.json.body?.journeyId ?? $('Webhook — Embauche validée').item.json.body.hireReference }} : {{ $json.body?.error ?? 'réponse inattendue' }} (statut {{ $json.statusCode }}). Trace complète dans audit_events (email.no_channel_available / email.delivery_failed) — voir send-welcome-email.ts."
+              "value": "=Email de bienvenue non envoyé pour le parcours {{ $(\"Appeler l'application — Créer le parcours\").item.json.body?.journeyId ?? $('Webhook — Embauche validée').item.json.body.hireReference }} : {{ $json.body?.error ?? 'réponse inattendue' }} (statut {{ $json.statusCode }}). Trace complète dans audit_events (email.no_channel_available / email.delivery_failed) — voir send-welcome-email.ts."
             }
           ]
         },
@@ -266,7 +284,7 @@
       "name": "Alerter la RH — Email de bienvenue en échec",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1340, 40]
+      "position": [1820, 140]
     }
   ],
   "connections": {
@@ -278,16 +296,16 @@
     },
     "Brancher sur la réponse": {
       "main": [
-        [
-          { "node": "Notifier les responsables (à câbler en T-24/T-25)", "type": "main", "index": 0 },
-          { "node": "Attendre la date d'envoi (T-24)", "type": "main", "index": 0 }
-        ],
+        [{ "node": "Notifier les responsables (à câbler en T-24/T-25)", "type": "main", "index": 0 }],
         [{ "node": "Ignorer (doublon)", "type": "main", "index": 0 }],
         [{ "node": "Alerter la RH — Échec explicite", "type": "main", "index": 0 }]
       ]
     },
     "Notifier les responsables (à câbler en T-24/T-25)": {
-      "main": [[{ "node": "Répondre au webhook", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Répondre au webhook — parcours créé", "type": "main", "index": 0 }]]
+    },
+    "Répondre au webhook — parcours créé": {
+      "main": [[{ "node": "Attendre la date d'envoi (T-24)", "type": "main", "index": 0 }]]
     },
     "Ignorer (doublon)": {
       "main": [[{ "node": "Répondre au webhook", "type": "main", "index": 0 }]]
@@ -308,6 +326,7 @@
       ]
     }
   },
+  "settings": { "executionOrder": "v1" },
   "pinData": {},
   "meta": {
     "instanceId": "onboardingrh-w1-validated-hire-export"

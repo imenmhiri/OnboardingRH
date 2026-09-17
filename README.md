@@ -116,6 +116,29 @@ société active.
 
 ## Automatisations (n8n)
 
+### Lancer n8n en local
+
+Prérequis : Docker Desktop démarré, l'application lancée sur le port 3000 avec un
+`N8N_WEBHOOK_SECRET` défini.
+
+```bash
+N8N_WEBHOOK_SECRET=<même valeur que l'application> npm run n8n:local
+```
+
+Le script [scripts/n8n/start-local.sh](scripts/n8n/start-local.sh) démarre une instance n8n propre
+(image officielle, `http://localhost:5678`), importe les trois workflows et le crédentiel d'en-tête
+(généré dans un dossier temporaire, jamais écrit dans le dépôt), puis publie W1. Au premier accès,
+n8n demande de créer un compte propriétaire local.
+
+- **W1** : `POST http://localhost:5678/webhook/w1-embauche-validee`, en-tête `x-webhook-secret`,
+  même corps que `/api/hires/validated`.
+- **W2 / W3** : ouvrir le workflow dans l'éditeur et cliquer « Test workflow » (déclencheur manuel,
+  à côté du déclencheur planifié qui reste non publié en local).
+
+Vérifié avec n8n 2.39.7 : W1 a parcouru ses quatre branches (créé, doublon, échec explicite, email
+différé puis alerte RH), W2 a tracé l'escalade de Diego, W3 a clos son parcours. Cette exécution
+réelle a révélé trois défauts dans le JSON de W1, corrigés (voir le ticket T-21).
+
 ### W1 — Embauche validée (T-21)
 
 **Déclencheur** — un webhook n8n authentifié reçoit l'identifiant de l'embauche validée (société,
@@ -164,12 +187,9 @@ donc sans RLS ; l'autorisation vient du secret webhook), `N8N_WEBHOOK_SECRET`, `
 (déclenché côté n8n, documenté pour mémoire), `RESEND_API_KEY`, `RESEND_FROM`, `NEXT_PUBLIC_APP_URL`
 (lien du portail dans l'email).
 
-**Export** — [workflows/w1-validated-hire.json](workflows/w1-validated-hire.json). Aucune instance
-n8n n'a pu tourner dans cet environnement (sandbox sans accès réseau vérifié pour `npx n8n`, voir
-[docs/tickets/T-21-w1-embauche-validee.md](docs/tickets/T-21-w1-embauche-validee.md)) : le JSON est
-écrit à la main selon le schéma documenté par n8n, et la partie réelle est vérifiée en appelant
-directement les routes (`Invoke-WebRequest`), preuve détaillée dans les tickets de clôture T-21 et
-T-24.
+**Export** — [workflows/w1-validated-hire.json](workflows/w1-validated-hire.json). Importé et
+exécuté dans une vraie instance n8n (voir « Lancer n8n en local ») ; détail dans
+[docs/tickets/T-21-w1-embauche-validee.md](docs/tickets/T-21-w1-embauche-validee.md) et T-24.
 
 ### W2 — Retard critique (T-22)
 
@@ -208,9 +228,8 @@ ouvrés.
 **Variables d'environnement** — les mêmes que W1/T-24 : `SUPABASE_SERVICE_ROLE_KEY`,
 `N8N_WEBHOOK_SECRET`, `RESEND_API_KEY`, `RESEND_FROM`, `NEXT_PUBLIC_APP_URL`, `ONBOARDING_APP_URL`.
 
-**Export** — [workflows/w2-critical-delay.json](workflows/w2-critical-delay.json). Même limite
-honnête que W1 : écrit à la main faute d'instance n8n réelle dans cet environnement, vérifié en
-appelant directement `/api/escalation/run` contre une base fraîchement réinitialisée — voir
+**Export** — [workflows/w2-critical-delay.json](workflows/w2-critical-delay.json). Importé et
+exécuté dans une vraie instance n8n via son déclencheur manuel — voir
 [docs/tickets/T-22-w2-retard-critique.md](docs/tickets/T-22-w2-retard-critique.md).
 
 ### W3 — Bilan J+30 (T-23)
@@ -236,9 +255,8 @@ vérifiable côté serveur sans état, et rejeté s'il est expiré ou altéré.
 
 **Variables d'environnement** — celles de W1/W2/T-24, plus `SURVEY_LINK_SECRET`.
 
-**Export** — [workflows/w3-day-30-review.json](workflows/w3-day-30-review.json), même limite honnête
-que W1/W2 (écrit à la main), vérifié en appelant directement `/api/surveys/run` contre une base
-fraîchement réinitialisée — voir
+**Export** — [workflows/w3-day-30-review.json](workflows/w3-day-30-review.json). Importé et exécuté
+dans une vraie instance n8n via son déclencheur manuel — voir
 [docs/tickets/T-23-w3-revue-j30.md](docs/tickets/T-23-w3-revue-j30.md). **Dette produit non couverte
 par ce ticket** : aucune page employé ne consomme encore ce lien signé (le questionnaire n'a pas
 d'écran de réponse dans `src/app/` à ce jour) — le mécanisme du lien est réel et testé, sa destination
@@ -331,7 +349,7 @@ proprement plutôt que de faire échouer autre chose. Détail complet, preuves d
 
 - **Aucune clé Anthropic réelle disponible dans cet environnement** (T-26) : le chemin de génération
   est vérifié jusqu'à l'appel réseau réel à `api.anthropic.com`, qui répond une erreur d'authentification
-  (clé factice) — même limite honnête que Resend, Google Calendar et n8n.
+  (clé factice) — même limite honnête que Resend et Google Calendar.
 - Aucune livraison Resend réelle n'a été vérifiée (pas de clé d'API réelle disponible dans cet
   environnement) : le chemin d'envoi est vérifié de bout en bout jusqu'à l'appel réseau réel à
   Resend, qui répond une erreur d'authentification (clé factice) — voir T-24.
@@ -342,7 +360,12 @@ proprement plutôt que de faire échouer autre chose. Détail complet, preuves d
   dans `src/app/` — un vrai gap produit à couvrir par un futur ticket.
 - **Aucun identifiant Google Calendar réel disponible dans cet environnement** (T-25) : le chemin de
   création/déplacement/annulation d'évènement est vérifié jusqu'à l'appel réseau réel à Google, qui
-  répond une erreur d'authentification (jeton factice) — même limite honnête que Resend et n8n.
+  répond une erreur d'authentification (jeton factice) — même limite honnête que Resend.
+- **W3 ne couvre pas encore deux étapes du cahier des charges** : il n'appelle pas la synthèse IA
+  (`/api/satisfaction/summarize` existe mais aucun workflow ne la déclenche) et n'envoie aucune
+  alerte RH sur signal faible (les signaux sont visibles dans le cockpit, sans notification).
+- **Les invitations des responsables (W1) ne partent pas par email** : les responsables sont bien
+  attribués, l'invitation est seulement tracée (`journey.owner_notification_pending`).
 - **Aucun déclencheur produit ne fait encore passer un parcours au statut `cancelled`** : l'annulation
   des évènements d'agenda d'un parcours annulé (T-25) est prête et testée
   (`cancel-journey-calendar-events.ts`) mais n'est reliée à aucun flux réel — rien dans l'application

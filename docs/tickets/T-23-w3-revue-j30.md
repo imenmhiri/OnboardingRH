@@ -193,7 +193,10 @@ répété de la route API, exactement ce que le nœud HTTP Request exécuterait 
   T-22/T-24 : l'envoi est vérifié jusqu'à l'appel réseau réel (rejeté pour authentification), pas
   jusqu'à la réception effective d'un email.
 - **`workflows/w3-day-30-review.json` n'a jamais tourné dans une vraie instance n8n**, même contrainte
-  réseau que W1/W2/T-24.
+  réseau que W1/W2/T-24. *Levé depuis : exécuté dans une vraie instance n8n 2.39.7 via un
+  déclencheur manuel ajouté ; le parcours de Diego a été clos (`journey.closed`, origine
+  `w3-day-30-review`). W3 n'appelle en revanche ni la synthèse IA ni une alerte RH sur signal
+  faible : voir « Limites connues » du README.*
 - **Le calendrier utilisé pour le seuil de relance/clôture est celui du site du parcours**, résolu à
   chaque itération (`ports.calendar.calendarFor(companyId, siteId)`) — cohérent avec W2, mais un
   passage sur une société avec beaucoup de parcours répète cet appel plutôt que de le mettre en cache

@@ -2,6 +2,15 @@
   "name": "W2 — Retard critique",
   "nodes": [
     {
+      "parameters": {},
+      "id": "2c3d2b20-0000-4b22-9b22-000000000000",
+      "name": "Lancer manuellement (test)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-140, 420],
+      "notes": "Même appel que le déclencheur planifié, lancé à la demande : bouton « Test workflow » dans l'éditeur, ou n8n execute en ligne de commande."
+    },
+    {
       "parameters": {
         "rule": {
           "interval": [
@@ -125,6 +134,9 @@
     }
   ],
   "connections": {
+    "Lancer manuellement (test)": {
+      "main": [[{ "node": "Appeler l'application — Relancer les retards critiques", "type": "main", "index": 0 }]]
+    },
     "Déclencheur planifié — un passage par jour ouvré": {
       "main": [[{ "node": "Appeler l'application — Relancer les retards critiques", "type": "main", "index": 0 }]]
     },
@@ -138,6 +150,7 @@
       ]
     }
   },
+  "settings": { "executionOrder": "v1" },
   "pinData": {},
   "meta": {
     "instanceId": "onboardingrh-w2-critical-delay-export"
