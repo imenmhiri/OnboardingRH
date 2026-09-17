@@ -131,6 +131,51 @@
       "typeVersion": 3.4,
       "position": [600, 340],
       "notes": "Espace réservé, même schéma que W2 : à câbler sur l'envoi Resend générique pour prévenir la RH d'une panne du passage planifié lui-même (pas un échec d'envoi individuel, déjà tracé côté application dans audit_events)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ONBOARDING_APP_URL }}/api/satisfaction/summarize",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-webhook-secret", "value": "={{ $env.N8N_WEBHOOK_SECRET }}" },
+            { "name": "content-type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({}) }}",
+        "options": {
+          "timeout": 600000,
+          "response": { "response": { "neverError": true, "fullResponse": true } }
+        }
+      },
+      "id": "3d4e3c30-0007-4c33-9c33-000000000007",
+      "name": "Appeler l'application — Synthèse IA anonymisée",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 200],
+      "notes": "Après le bilan : les nouvelles réponses entrent dans la synthèse. L'application anonymise les commentaires, applique le seuil de répondants et choisit le modèle (Ollama local ou Anthropic) — n8n ne voit aucun verbatim. Un échec du modèle ne bloque rien : le cockpit garde la dernière synthèse connue."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "synthese",
+              "type": "string",
+              "value": "=Synthèse IA (statut {{ $json.statusCode }}) : {{ JSON.stringify(($json.body?.results ?? []).map(r => r.outcomes)) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3d4e3c30-0008-4c33-9c33-000000000008",
+      "name": "Consigner la synthèse IA",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1100, 200]
     }
   ],
   "connections": {
@@ -148,6 +193,12 @@
         [{ "node": "Consigner le résultat", "type": "main", "index": 0 }],
         [{ "node": "Alerter la RH — Échec du passage", "type": "main", "index": 0 }]
       ]
+    },
+    "Consigner le résultat": {
+      "main": [[{ "node": "Appeler l'application — Synthèse IA anonymisée", "type": "main", "index": 0 }]]
+    },
+    "Appeler l'application — Synthèse IA anonymisée": {
+      "main": [[{ "node": "Consigner la synthèse IA", "type": "main", "index": 0 }]]
     }
   },
   "settings": { "executionOrder": "v1" },

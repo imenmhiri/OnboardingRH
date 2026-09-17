@@ -244,13 +244,21 @@ composants à majuscule initiale (voir « Décisions prises »), avec deux tests
   l'appel réseau réel (rejeté pour authentification), jamais jusqu'à une synthèse réellement produite
   par le modèle et affichée dans un vrai navigateur. Même limite honnête que Resend (T-24), Google
   Calendar (T-25) et n8n (T-21).
+  *Levé depuis, avec un fournisseur gratuit : un port Ollama (modèle ouvert `qwen2.5:3b`, local, sans
+  clé) a été ajouté et sélectionné par `AI_SUMMARY_PROVIDER`. W3, lancé depuis une vraie instance
+  n8n, a produit deux synthèses en 32 s (Lille et société, 5 répondants) ; aucun nom ni email des
+  verbatims de démonstration n'y figure, et le cockpit les affiche avec la mention « Synthèse générée
+  automatiquement » (capture d'écran vérifiée). Deux correctifs au passage : le seuil compte désormais
+  des personnes et non des commentaires, et le modèle Anthropic par défaut, retiré, est remplacé par
+  `claude-opus-5`.*
 - **Le garde-fou heuristique pour un nom propre hors roster a un coût de faux positifs et de faux
   négatifs assumé**, documenté en tête de `anonymize-comment.ts` — pas une réparation complète du
   risque de ré-identification par nom propre non recensé, une réduction significative dont les limites
   sont écrites noir sur blanc plutôt que passées sous silence.
 - **Pas de vérification par navigateur réel du rendu cockpit** (Playwright absent de cet
   environnement, même limite que T-25) : la donnée et la requête RLS-scopée sont vérifiées de bout en
-  bout contre la base réelle, pas le DOM final.
+  bout contre la base réelle, pas le DOM final. *Levé depuis : rendu vérifié dans Chrome via
+  Playwright.*
 - **Aucun n8n réel n'a déclenché `POST /api/satisfaction/summarize`** dans cet environnement (même
   limite que W1/W2/W3, T-21) : la route est appelée directement, avec le même secret partagé que les
   autres webhooks — pas d'export `workflows/*.json` dédié pour ce ticket, dans la continuité de T-25

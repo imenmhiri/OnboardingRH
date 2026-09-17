@@ -45,7 +45,7 @@ describe('generateSatisfactionSummaries', () => {
       companyId: 'company-1',
       companyLabel: 'Atelier Nord',
       siteLabelById: new Map([[SITE_LILLE, 'Lille']]),
-      comments: [{ siteId: SITE_LILLE, comment: 'Tout va bien.' }],
+      comments: [{ respondentKey: 'person-1', siteId: SITE_LILLE, comment: 'Tout va bien.' }],
       minimumRespondents: 2,
       generatedAt: '2026-09-16T00:00:00.000Z',
     });
@@ -63,8 +63,8 @@ describe('generateSatisfactionSummaries', () => {
       companyLabel: 'Atelier Nord',
       siteLabelById: new Map([[SITE_LILLE, 'Lille']]),
       comments: [
-        { siteId: SITE_LILLE, comment: "Alice Arrivante a trouve l'accueil chaleureux a Lille." },
-        { siteId: SITE_LILLE, comment: 'Le materiel est arrive en retard.' },
+        { respondentKey: 'person-2', siteId: SITE_LILLE, comment: "Alice Arrivante a trouve l'accueil chaleureux a Lille." },
+        { respondentKey: 'person-3', siteId: SITE_LILLE, comment: 'Le materiel est arrive en retard.' },
       ],
       minimumRespondents: 2,
       generatedAt: '2026-09-16T00:00:00.000Z',
@@ -87,8 +87,8 @@ describe('generateSatisfactionSummaries', () => {
       companyLabel: 'Atelier Nord',
       siteLabelById: new Map([[SITE_LILLE, 'Lille']]),
       comments: [
-        { siteId: SITE_LILLE, comment: 'Commentaire un.' },
-        { siteId: SITE_LILLE, comment: 'Commentaire deux.' },
+        { respondentKey: 'person-4', siteId: SITE_LILLE, comment: 'Commentaire un.' },
+        { respondentKey: 'person-5', siteId: SITE_LILLE, comment: 'Commentaire deux.' },
       ],
       minimumRespondents: 2,
       generatedAt: '2026-09-16T00:00:00.000Z',
@@ -108,8 +108,8 @@ describe('generateSatisfactionSummaries', () => {
       companyLabel: 'Atelier Nord',
       siteLabelById: new Map([[SITE_LILLE, 'Lille']]),
       comments: [
-        { siteId: SITE_LILLE, comment: 'Commentaire un.' },
-        { siteId: SITE_LILLE, comment: 'Commentaire deux.' },
+        { respondentKey: 'person-6', siteId: SITE_LILLE, comment: 'Commentaire un.' },
+        { respondentKey: 'person-7', siteId: SITE_LILLE, comment: 'Commentaire deux.' },
       ],
       minimumRespondents: 2,
       generatedAt: '2026-09-16T00:00:00.000Z',
@@ -127,8 +127,8 @@ describe('generateSatisfactionSummaries', () => {
       companyLabel: 'Atelier Nord',
       siteLabelById: new Map([[SITE_LILLE, 'Lille']]),
       comments: [
-        { siteId: SITE_LILLE, comment: 'Un vrai commentaire.' },
-        { siteId: SITE_LILLE, comment: '   ' },
+        { respondentKey: 'person-8', siteId: SITE_LILLE, comment: 'Un vrai commentaire.' },
+        { respondentKey: 'person-9', siteId: SITE_LILLE, comment: '   ' },
       ],
       minimumRespondents: 2,
       generatedAt: '2026-09-16T00:00:00.000Z',
@@ -136,5 +136,22 @@ describe('generateSatisfactionSummaries', () => {
 
     const siteOutcome = outcomes.find((o) => o.groupKey === SITE_LILLE);
     expect(siteOutcome?.status).toBe('below_threshold');
+  });
+  it('counts people, not comments: two answers from the same person stay below a threshold of two', async () => {
+    const ports = makePorts();
+    const outcomes = await generateSatisfactionSummaries(ports, {
+      companyId: 'company-1',
+      companyLabel: 'Atelier Nord',
+      siteLabelById: new Map([[SITE_LILLE, 'Lille']]),
+      comments: [
+        { respondentKey: 'same-person', siteId: SITE_LILLE, comment: 'Reponse a J+7.' },
+        { respondentKey: 'same-person', siteId: SITE_LILLE, comment: 'Reponse a J+30.' },
+      ],
+      minimumRespondents: 2,
+      generatedAt: '2026-09-16T00:00:00.000Z',
+    });
+
+    expect(ports.summarizeCalls).toHaveLength(0);
+    expect(outcomes.find((o) => o.groupKey === SITE_LILLE)).toMatchObject({ status: 'below_threshold', respondentCount: 1 });
   });
 });

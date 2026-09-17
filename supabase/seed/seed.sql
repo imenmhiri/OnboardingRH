@@ -351,6 +351,32 @@ update public.journeys
 set contract_type = 'cdd', end_date = current_date + 5
 where id = 'a0000000-0000-4000-8000-000000000003';
 
+-- Quatre arrivées plus anciennes, terminées, qui ont répondu à leur J+30.
+-- Avec Farida, cinq personnes différentes ont répondu à Lille : c'est le seuil
+-- minimal au-delà duquel une synthèse IA peut être produite (T-26). Deux
+-- commentaires contiennent volontairement un nom et un email, pour montrer
+-- qu'ils sont retirés avant tout appel au modèle.
+insert into public.journeys (id, company_id, site_id, template_id, employee_id, employee_name, job_family, contract_type, manager_id, arrival_date, status)
+values
+  ('a0000000-0000-4000-8000-000000000006', '11111111-1111-4111-8111-111111111111', 'a1111111-1111-4111-8111-111111111111', 'f0000000-0000-4000-8000-000000000001', null, 'Paul Passé', 'atelier', 'cdi', 'e0000000-0000-4000-8000-000000000002', current_date - 60, 'completed'),
+  ('a0000000-0000-4000-8000-000000000007', '11111111-1111-4111-8111-111111111111', 'a1111111-1111-4111-8111-111111111111', 'f0000000-0000-4000-8000-000000000001', null, 'Léa Lointaine', 'atelier', 'cdi', 'e0000000-0000-4000-8000-000000000002', current_date - 75, 'completed'),
+  ('a0000000-0000-4000-8000-000000000008', '11111111-1111-4111-8111-111111111111', 'a1111111-1111-4111-8111-111111111111', 'f0000000-0000-4000-8000-000000000001', null, 'Sami Souvenir', 'atelier', 'cdi', 'e0000000-0000-4000-8000-000000000002', current_date - 90, 'completed'),
+  ('a0000000-0000-4000-8000-000000000009', '11111111-1111-4111-8111-111111111111', 'a1111111-1111-4111-8111-111111111111', 'f0000000-0000-4000-8000-000000000001', null, 'Zoé Zénith', 'atelier', 'cdi', 'e0000000-0000-4000-8000-000000000002', current_date - 120, 'completed');
+
+insert into public.surveys (id, company_id, journey_id, milestone, scheduled_on, status, cancelled_reason, channel, sent_at, answered_at)
+values
+  ('c1000000-0000-4000-8000-000000000011', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000006', 'day_30', current_date - 18, 'answered', null, 'email', now() - interval '18 days', now() - interval '17 days'),
+  ('c1000000-0000-4000-8000-000000000012', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000007', 'day_30', current_date - 33, 'answered', null, 'email', now() - interval '33 days', now() - interval '32 days'),
+  ('c1000000-0000-4000-8000-000000000013', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000008', 'day_30', current_date - 48, 'answered', null, 'email', now() - interval '48 days', now() - interval '47 days'),
+  ('c1000000-0000-4000-8000-000000000014', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000009', 'day_30', current_date - 78, 'answered', null, 'email', now() - interval '78 days', now() - interval '77 days');
+
+insert into public.survey_responses (company_id, survey_id, rating, comment, themes)
+values
+  ('11111111-1111-4111-8111-111111111111', 'c1000000-0000-4000-8000-000000000011', 3, 'Le badge d''accès n''était pas prêt le premier jour, j''ai attendu à l''accueil. Marc Manceau a heureusement pris le temps de m''orienter.', '{accès,accueil}'),
+  ('11111111-1111-4111-8111-111111111111', 'c1000000-0000-4000-8000-000000000012', 4, 'Bon accueil de l''équipe, mais l''ordinateur n''avait pas les logiciels nécessaires pendant trois jours.', '{accueil,matériel}'),
+  ('11111111-1111-4111-8111-111111111111', 'c1000000-0000-4000-8000-000000000013', 2, 'Personne ne m''a présenté les outils internes ; c''est Kevin Dupont, un collègue, qui m''a tout montré.', '{formation}'),
+  ('11111111-1111-4111-8111-111111111111', 'c1000000-0000-4000-8000-000000000014', 4, 'Parcours clair et bien organisé, même si l''accès aux applications a pris du temps. Écrivez-moi à zoe.perso@exemple.fr pour en parler.', '{accès}');
+
 insert into public.surveys (id, company_id, journey_id, milestone, scheduled_on, status, cancelled_reason, channel, sent_at, answered_at)
 values
   -- Farida, parcours terminé : les deux questionnaires ont été remplis, et la

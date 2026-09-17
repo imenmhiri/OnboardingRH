@@ -3,6 +3,7 @@ import type {
   SatisfactionSummaryRequest,
   SatisfactionSummaryResult,
 } from '@/application/ports/satisfaction-summarizer';
+import { buildSummaryUserContent, SUMMARY_SYSTEM_PROMPT } from '@/infrastructure/ai/summary-prompt';
 
 /**
  * Sous-ensemble de `fetch` injecte pour rester testable sans reseau ni cle
@@ -13,31 +14,8 @@ export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>
 
 const MESSAGES_ENDPOINT = 'https://api.anthropic.com/v1/messages';
 const ANTHROPIC_VERSION = '2023-06-01';
-const DEFAULT_MODEL = 'claude-3-5-haiku-latest';
+const DEFAULT_MODEL = 'claude-opus-5';
 const MAX_TOKENS = 500;
-
-/**
- * Instructions systeme : le modele ne voit jamais que des commentaires deja
- * anonymises (voir `domain/privacy/anonymize-comment`), mais le prompt
- * reste defensif — si un identifiant a malgre tout survecu a la
- * redaction deterministe, il ne doit jamais etre repete tel quel.
- */
-const SYSTEM_PROMPT = `Tu resumes des commentaires de satisfaction anonymises, recueillis aupres d'un
-groupe de plusieurs personnes dans le cadre d'une integration professionnelle.
-
-Regles strictes :
-- Les commentaires fournis sont deja anonymises (noms, emails, sites remplaces
-  par des mentions entre crochets comme [personne] ou [email]). Ne tente
-  jamais de deviner ou de reconstituer une identite a partir du contexte.
-  Si un element du texte ressemble malgre tout a un nom propre, un email ou
-  un identifiant precis, ne le reprends jamais dans ta reponse.
-- Ne cite aucun commentaire mot pour mot ; degage seulement les themes
-  recurrents et les points de friction communs a plusieurs personnes.
-- Ne formule jamais une phrase qui pourrait passer pour un fait etabli sur
-  un individu precis ; ta reponse decrit toujours une tendance de groupe.
-- Reste factuel, concis (5 phrases maximum), et en francais.
-- Termine implicitement ta reponse comme un resume agrege, jamais comme une
-  citation individuelle.`;
 
 interface AnthropicOptions {
   readonly apiKey: string;
@@ -48,11 +26,6 @@ interface AnthropicOptions {
 interface AnthropicMessageResponse {
   readonly content?: readonly { readonly type: string; readonly text?: string }[];
   readonly error?: { readonly type?: string; readonly message?: string };
-}
-
-function buildUserContent(request: SatisfactionSummaryRequest): string {
-  const list = request.anonymizedComments.map((comment, index) => `${index + 1}. ${comment}`).join('\n');
-  return `Groupe : ${request.groupLabel}\nCommentaires anonymises (${request.anonymizedComments.length}) :\n${list}`;
 }
 
 /**
@@ -81,8 +54,8 @@ export function createAnthropicSummarizer(options: AnthropicOptions): Satisfacti
           body: JSON.stringify({
             model,
             max_tokens: MAX_TOKENS,
-            system: SYSTEM_PROMPT,
-            messages: [{ role: 'user', content: buildUserContent(request) }],
+            system: SUMMARY_SYSTEM_PROMPT,
+            messages: [{ role: 'user', content: buildSummaryUserContent(request) }],
           }),
         });
 

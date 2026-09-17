@@ -4,7 +4,7 @@ import { generateSatisfactionSummaries } from '@/application/use-cases/generate-
 import { createSupabaseServiceClient } from '@/infrastructure/supabase/service-client';
 import { supabaseRosterDirectory } from '@/infrastructure/supabase/roster-directory';
 import { supabaseSatisfactionSummaryRepository } from '@/infrastructure/supabase/satisfaction-summary-repository';
-import { createAnthropicSummarizerFromEnv } from '@/infrastructure/anthropic/satisfaction-summarizer';
+import { createSummarizerFromEnv } from '@/infrastructure/ai/summarizer-from-env';
 
 /**
  * T-26 — declenchee par n8n sur son propre planning, alignee sur le passage
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const ports = {
     roster: supabaseRosterDirectory(client),
-    summarizer: createAnthropicSummarizerFromEnv(),
+    summarizer: createSummarizerFromEnv(),
     summaries: supabaseSatisfactionSummaryRepository(client),
   };
 
@@ -84,6 +84,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const comments = ((responseRows ?? []) as unknown as ResponseRow[])
       .filter((row) => row.comment && row.comment.trim().length > 0 && row.surveys)
       .map((row) => ({
+        respondentKey: row.surveys!.journey_id,
         siteId: siteByJourney.get(row.surveys!.journey_id) ?? null,
         comment: row.comment as string,
       }));

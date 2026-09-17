@@ -20,9 +20,17 @@ import type { SatisfactionSummaryRepository } from '@/application/ports/satisfac
  */
 
 export interface SurveyCommentSource {
+  /**
+   * Identifie la personne qui a répondu (son parcours). Le seuil compte des
+   * personnes, pas des commentaires : les réponses J+7 et J+30 d'une même
+   * personne ne font qu'un répondant.
+   */
+  readonly respondentKey: string;
   readonly siteId: string | null;
   readonly comment: string;
 }
+
+type GroupComment = Pick<SurveyCommentSource, 'respondentKey' | 'comment'>;
 
 export interface GenerateSatisfactionSummariesInput {
   readonly companyId: string;
@@ -51,14 +59,14 @@ function groupComments(
   comments: readonly SurveyCommentSource[],
   siteLabelById: ReadonlyMap<string, string>,
   companyLabel: string,
-): ReadonlyMap<string, { readonly label: string; readonly comments: readonly string[] }> {
-  const bySite = new Map<string, string[]>();
+): ReadonlyMap<string, { readonly label: string; readonly comments: readonly GroupComment[] }> {
+  const bySite = new Map<string, GroupComment[]>();
   for (const entry of comments) {
     const key = entry.siteId ?? 'none';
-    bySite.set(key, [...(bySite.get(key) ?? []), entry.comment]);
+    bySite.set(key, [...(bySite.get(key) ?? []), entry]);
   }
 
-  const groups = new Map<string, { readonly label: string; readonly comments: readonly string[] }>();
+  const groups = new Map<string, { readonly label: string; readonly comments: readonly GroupComment[] }>();
   for (const [siteId, siteComments] of bySite) {
     if (siteId === 'none') continue;
     const label = siteLabelById.get(siteId) ?? 'Site inconnu';
@@ -67,7 +75,7 @@ function groupComments(
   // Le groupe societe entiere agrege tous les commentaires, quel que soit le site.
   groups.set(COMPANY_WIDE_GROUP_KEY, {
     label: `${companyLabel} — toutes localisations`,
-    comments: comments.map((entry) => entry.comment),
+    comments,
   });
   return groups;
 }
@@ -82,16 +90,15 @@ export async function generateSatisfactionSummaries(
   const outcomes: SummaryOutcome[] = [];
 
   for (const [groupKey, group] of groups) {
-    const respondentCount = group.comments.filter((comment) => comment.trim().length > 0).length;
+    const written = group.comments.filter((entry) => entry.comment.trim().length > 0);
+    const respondentCount = new Set(written.map((entry) => entry.respondentKey)).size;
 
     if (respondentCount < input.minimumRespondents) {
       outcomes.push({ groupKey, groupLabel: group.label, status: 'below_threshold', respondentCount });
       continue;
     }
 
-    const anonymized = group.comments
-      .filter((comment) => comment.trim().length > 0)
-      .map((comment) => anonymizeComment(comment, roster));
+    const anonymized = written.map((entry) => anonymizeComment(entry.comment, roster));
 
     const result = await ports.summarizer.summarize({ groupLabel: group.label, anonymizedComments: anonymized });
 
